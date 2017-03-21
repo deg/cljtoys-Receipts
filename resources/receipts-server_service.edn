@@ -3,104 +3,140 @@
  :descriptor
  ;; Datomic Schema Norms
  ;; --------------------
- {:vase/norms
-  {:receipts-server/base-schema
-   ;; Supports full/long Datomic schemas
-   {:vase.norm/txes [[{:db/id #db/id[:db.part/db]
-                       :db/ident :company/name
-                       :db/unique :db.unique/value
-                       :db/valueType :db.type/string
-                       :db/cardinality :db.cardinality/one
-                       :db.install/_attribute :db.part/db}]]}
-   :receipts-server/user-schema
-   {:vase.norm/requires [:receipts-server/base-schema] ;; Also supports schema dependencies
-    ;; and supports short/basic schema definitions
-    :vase.norm/txes [#vase/schema-tx [[:user/userId :one :long :identity "A User's unique identifier"]
-                                      [:user/userEmail :one :string :unique "The user's email"]
-                                      ;; :fulltext also implies :index
-                                      [:user/userBio :one :string :fulltext "A short blurb about the user"]
-                                      [:user/company :one :ref "The user's employer"]]]}}
+ {:vase/norms {:receipts-server/user-schema {:vase.norm/txes [#vase/schema-tx [[:user/userId :one :long :identity "A User's unique identifier"]
+                                                                               [:user/userEmail :one :string :unique "The user's email"]
+                                                                               ;; :fulltext also implies :index
+                                                                               [:user/userBio :one :string :fulltext "A short blurb about the user"]
+                                                                               [:user/company :one :ref "The user's employer"]]]}
+               :receipts/schema {:vase.norm/txes
+                                 [#vase/schema-tx
+                                  [;; [:receipts.category/id          :one  :long :identity   "Category ID"]
+                                   [:receipts.category/name        :one  :string           "Category name"]
+                                   [:receipts.category/description :one  :string :fulltext "Info about category"]
+                                   [:receipts.category/vendor      :many :ref              "IDs Vendors in category"]
+
+                                   ;; [:receipts.vendor/id            :one  :long             "Vendor id"]
+                                   [:receipts.vendor/name          :one  :string           "Vendor name"]
+                                   [:receipts.vendor/comment     :one  :string :fulltext   "Comment"]
+
+                                   ;; [:receipts.purchase/id          :one  :long :identity   "Purchase ID"]
+                                   [:receipts.purchase/price       :one  :float            "Price"]
+                                   [:receipts.purchase/category    :one  :ref              "Categoory of purchase"]
+                                   [:receipts.purchase/vendor      :one  :ref              "Vendor where purchased"]
+                                   [:receipts.purchase/paid-by     :one  :ref              "Payment method ID"]
+                                   [:receipts.purchase/date        :one  :instant          "When purchased"]
+                                   [:receipts.purchase/comment     :one  :string :fulltext "Comment"]
+                                   [:receipts.purchase/forWhom     :one  :ref              "For whom purchased"]
+
+                                   ;; [:receipts.user/id              :one :long :identity    "User ID"]
+                                   [:receipts.user/name            :one :string            "User name"]
+                                   [:receipts.user/abbrev          :one :string :unique    "Brief user name for Excel"]
+                                   [:receipts.user/email           :one :string            "User email"]
+                                   [:receipts.user/isSysAdmin      :one :boolean           "User has full access"]
+                                   [:receipts.user/isEditor        :one :boolean           "User can add entries"]
+                                   [:receipts.user/isConsumer      :one :boolean           "User can be listed as purchaser"]
+
+                                   ;; [:receipts.paymentMethod/id      :one :long :identity   "Payment method ID"]
+                                   [:receipts.paymentMethod/name    :one :string :unique   "Payment method name"]
+                                   [:receipts.paymentMethod/abbrev  :one :string :unique   "Payment method name for Excel"]]]}}
 
   ;; Global Specs for the API
   ;; ------------------------
-  :vase/specs
-  {:receipts-server.test/age (fn [age] (> age 21))
-   :receipts-server.test/name (clojure.spec/and string? not-empty)
-   :receipts-server.test/person (clojure.spec/keys :req-un [:receipts-server.test/name
-                                                     :receipts-server.test/age])}
+  :vase/specs {:receipts-server.test/age (fn [age] (> age 21))
+               :receipts-server.test/name (clojure.spec/and string? not-empty)
+               :receipts-server.test/person (clojure.spec/keys :req-un [:receipts-server.test/name
+                                                                        :receipts-server.test/age])}
 
   ;; API Tagged Chunks/Versions
   ;; --------------------------
-  :vase/apis
-  {:receipts-server/v1
-   {:vase.api/routes
-    {"/hello" {:get #vase/respond {:name :receipts-server.v1/simple-response
-                                   :body "Hello World"}}
-     "/hello2" {:get #vase/respond {:name :receipts-server.v1/param-response
-                                    ;; POST bodies and query string args are bound in :params
-                                    :params [user]
-                                    ;; `edn-coerce` will edn/read-string on params, with all active data readers
-                                    :edn-coerce [user]
-                                    :body (if user
-                                            (str "Hello " user ". You are a: " (type user))
-                                            "Hello World!")}}
-     "/redirect-to-google" {:get #vase/redirect {:name :receipts-server.v1/r-page
-                                                 :url "http://www.google.com"}}
-     "/redirect-to-param" {:get #vase/redirect {:name :receipts-server.v1/ar-page
-                                                :params [someurl]
-                                                :url someurl}}
-     ;; Validate (with clojure.spec) happens on the entire `param` map
-     "/validate" {:post #vase/validate {:name :receipts-server.v1/validate-page
-                                        :spec :receipts-server.test/person}}
-     ;; Just use datomic queries
-     "/db" {:get #vase/query {:name :receipts-server.v1/db-page
-                              :params []
-                              :query [:find ?e ?v
-                                      :where [?e :db/ident ?v]]}}
+  :vase/apis {:receipts-server/v1
+              {:vase.api/routes
+               {"/welcome" {:get #vase/respond {:name :receipts-server.v1/welcome-page
+                                              :body "Welcome to the receipts server, v1.3"}}
 
-     "/users" {:get #vase/query {:name :receipts-server.v1/users-page
-                                 :params []
-                                 :query [:find ?id ?email
-                                         :where
-                                         [?e :user/userId ?id]
-                                         [?e :user/userEmail ?email]]}}
+                "/db" {:get #vase/query {:name :receipts-server.v1/db-page
+                                         :params []
+                                         :query [:find ?e ?v
+                                                 :where [?e :db/ident ?v]]}}
 
-     "/users/:id" {:get #vase/query {:name :receipts-server.v1/user-id-page
-                                     :params [id]
-                                     :edn-coerce [id]
-                                     :query [:find ?e
-                                             :in $ ?id
-                                             :where
-                                             [?e :user/userId ?id]]}}
-
-     "/user" {:get #vase/query {:name :receipts-server.v1/user-page
-                                ;; All params are required to perform the query
-                                :params [email]
-                                :query [:find ?e
-                                        :in $ ?email
-                                        :where
-                                        [?e :user/userEmail ?email]]}
-              :post #vase/transact {:name :receipts-server.v1/user-create
-                                    ;; `:properties` are pulled from the parameters
-                                    :properties [:db/id
-                                                 :user/userId
-                                                 :user/userEmail
-                                                 :user/userBio]}
-              :delete #vase/transact {:name :receipts-server.v1/user-delete
-                                      :db-op :vase/retract-entity
-                                      ;; :vase/retract-entity requires :db/id to be supplied
-                                      :properties [:db/id]}}
-
-     "/jane-and-someone" {:get #vase/query {:name :receipts-server.v1/fogussomeone-page
-                                            ;; Params can have default values, using the "default pair" notation
-                                            :params [[someone "jill@example.com"]]
-                                            :constants ["jane@example.com"]
-                                            :query [:find ?e
-                                                    :in $ ?someone ?jane
+                "/users" {:get #vase/query {:name :receipts-server.v1/users-get
+                                            :params []
+                                            :query [:find ?e ?name ?abbrev ?email ?isSysAdmin ?isEditor ?isConsumer
                                                     :where
-                                                    [(list ?someone ?jane) [?emails ...]]
-                                                    [?e :user/userEmail ?emails]]}}}
-    ;:vase.api/interceptors [] ;; Any extra interceptors to apply to this API chunk/version
-    :vase.api/schemas [:receipts-server/user-schema]
-    :vase.api/forward-headers ["vaserequest-id"]}}}}
+                                                    [(get-else $ ?e :receipts.user/name "no-none") ?name]
+                                                    [(get-else $ ?e :receipts.user/abbrev ?name) ?abbrev]
+                                                    [?e :receipts.user/email ?email]
+                                                    [(get-else $ ?e :receipts.user/isSysAdmin false) ?isSysAdmin]
+                                                    [(get-else $ ?e :receipts.user/isEditor false) ?isEditor]
+                                                    [(get-else $ ?e :receipts.user/isConsumer true) ?isConsumer]]}}
+
+                "/user" {:get #vase/query {:name :receipts-server.v1/user-get
+                                           :params [email]
+                                           :query [:find ?e ?email
+                                                   :in $ ?email
+                                                   :where
+                                                   [?e :receipts.user/email ?email]]}
+                         :post #vase/transact {:name :receipts-server.v1/user-create
+                                               :properties [:db/id
+                                                            :receipts.user/name
+                                                            :receipts.user/abbrev
+                                                            :receipts.user/email
+                                                            :receipts.user/isSysAdmin
+                                                            :receipts.user/isEditor
+                                                            :receipts.user/isConsumer]}
+                         :delete #vase/transact {:name :receipts-server.v1/user-delete
+                                                 :db-op :vase/retract-entity
+                                                 :properties [:db/id]}}
+
+                "/paymentMethods" {:get #vase/query {:name :receipts-server.v1/paymentMethods-get
+                                            :params []
+                                            :query [:find ?e ?name ?abbrev
+                                                    :where
+                                                    [?e :receipts.paymentMethod/name ?name]
+                                                    [?e :receipts.paymentMethod/abbrev ?abbrev]]}}
+
+
+
+                "/paymentMethod" {:get #vase/query {:name :receipts-server.v1/paymentMethod-get
+                                                    :params [name]
+                                                    :query [:find ?e ?name
+                                                            :in $ ?name
+                                                            :where
+                                                            [?e :receipts.paymentMethod/name ?name]]}
+                                  :post #vase/transact {:name :receipts-server.v1/paymentMethod-create
+                                                        :properties [:db/id
+                                                                     :receipts.paymentMethod/name
+                                                                     :receipts.paymentMethod/abbrev]}
+                                  :delete #vase/transact {:name :receipts-server.v1/paymentMethod-delete
+                                                          :db-op :vase/retract-entity
+                                                          :properties [:db/id]}}
+
+                ;; ================================================================
+
+
+                ;; Validate (with clojure.spec) happens on the entire `param` map
+                "/validate" {:post #vase/validate {:name :receipts-server.v1/validate-page
+                                                   :spec :receipts-server.test/person}}
+                ;; Just use datomic queries
+
+                "/users/:id" {:get #vase/query {:name :receipts-server.v1/user-id-page
+                                                :params [id]
+                                                :edn-coerce [id]
+                                                :query [:find ?e
+                                                        :in $ ?id
+                                                        :where
+                                                        [?e :user/userId ?id]]}}
+
+                "/jane-and-someone" {:get #vase/query {:name :receipts-server.v1/fogussomeone-page
+                                                       ;; Params can have default values, using the "default pair" notation
+                                                       :params [[someone "jill@example.com"]]
+                                                       :constants ["jane@example.com"]
+                                                       :query [:find ?e
+                                                               :in $ ?someone ?jane
+                                                               :where
+                                                               [(list ?someone ?jane) [?emails ...]]
+                                                               [?e :user/userEmail ?emails]]}}}
+                                        ;:vase.api/interceptors [] ;; Any extra interceptors to apply to this API chunk/version
+               :vase.api/schemas [:receipts-server/user-schema]
+               :vase.api/forward-headers ["vaserequest-id"]}}}}
 
