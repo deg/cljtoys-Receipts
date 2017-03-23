@@ -71,11 +71,30 @@
                                                     [(get-else $ ?e :receipts.user/isConsumer true) ?isConsumer]]}}
 
                 "/user" {:get #vase/query {:name :receipts-server.v1/user-get
-                                           :params [email]
-                                           :query [:find ?e ?email
-                                                   :in $ ?email
+                                           :params [name abbrev email]
+                                           :query [:find ?e
+                                                   ?attr ?val ?found-email ?found-name ?found-abbrev ;; DBG
+                                                   :in $ ?name ?abbrev ?email
                                                    :where
-                                                   [?e :receipts.user/email ?email]]}
+                                                   [(count ?email) ?n-email]
+                                                   [(count ?name) ?n-name]
+                                                   [(count ?abbrev) ?n-abbrev]
+                                                   [(pos? ?n-email) ?p-email]
+                                                   [(pos? ?n-name) ?p-name]
+                                                   [(pos? ?n-abbrev) ?p-abbrev]
+                                                   [(and ?p-email :receipts.user/email) ?attr-email]
+                                                   [(and ?p-name :receipts.user/name) ?attr-name]
+                                                   [(and ?p-abbrev :receipts.user/abbrev) ?attr-abbrev]
+                                                   [(or ?attr-email ?attr-name ?attr-abbrev) ?attr]
+                                                   [(and ?p-email ?email) ?val-email]
+                                                   [(and ?p-name ?name) ?val-name]
+                                                   [(and ?p-abbrev ?abbrev) ?val-abbrev]
+                                                   [(or ?val-email ?val-name ?val-abbrev) ?val]
+                                                   [?e ?attr ?val]
+                                                   [?e :receipts.user/email ?found-email]   ;; DBG
+                                                   [?e :receipts.user/name ?found-name]     ;; DBG
+                                                   [?e :receipts.user/abbrev ?found-abbrev] ;; DBG
+                                                   ]}
                          :post #vase/transact {:name :receipts-server.v1/user-create
                                                :properties [:db/id
                                                             :receipts.user/name
