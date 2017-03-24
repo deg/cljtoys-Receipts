@@ -8,7 +8,9 @@
                  [re-com "2.0.0"]
                  [secretary "1.2.3"]
                  [garden "1.3.2"]
-                 [ns-tracker "0.3.0"]]
+                 [ns-tracker "0.3.0"]
+                 [cljs-ajax "0.5.8"]
+                 [day8.re-frame/http-fx "0.1.3"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]

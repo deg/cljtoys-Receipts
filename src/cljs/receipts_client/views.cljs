@@ -17,10 +17,18 @@
    :label "go to About Page"
    :href "#/about"])
 
+(defn request-it-button
+  []
+  [:div {:class "button-class"
+         :on-click  #(re-frame/dispatch [:toy-startup])}
+         "I want it, now!"])
+
 (defn home-panel []
   [re-com/v-box
    :gap "1em"
-   :children [[home-title] [link-to-about-page]]])
+   :children [[home-title]
+              [request-it-button]
+              [link-to-about-page]]])
 
 
 ;; about
