@@ -17,17 +17,17 @@
    :label "go to About Page"
    :href "#/about"])
 
-(defn request-it-button
+(defn preload-button
   []
   [:div {:class "button-class"
-         :on-click  #(re-frame/dispatch [:toy-startup])}
-         "I want it, now!"])
+         :on-click  #(re-frame/dispatch [:preload-base])}
+   "Preload DB base"])
 
 (defn home-panel []
   [re-com/v-box
    :gap "1em"
    :children [[home-title]
-              [request-it-button]
+              [preload-button]
               [link-to-about-page]]])
 
 
