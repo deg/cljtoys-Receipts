@@ -42,7 +42,8 @@
   ;; API Tagged Chunks/Versions
   ;; --------------------------
   :vase/apis {:receipts-server/v1
-              {:vase.api/routes
+              {:vase.api/interceptors [io.pedestal.http/transit-body]
+               :vase.api/routes
                {"/welcome" {:get #vase/respond {:name :receipts-server.v1/welcome-page
                                                 :body "Welcome to the receipts server, v1.3"}}
 
@@ -50,7 +51,6 @@
                                          :params []
                                          :query [:find ?e ?v
                                                  :where [?e :db/ident ?v]]}}
-
                 "/entities" {:get #vase/query {:name :receipts-server.v1/entities-get
                                             :query [:find (pull ?e [*])
                                                     :where (or [?e :receipts.user/name]
@@ -72,17 +72,29 @@
                                                     :in $ ?email ?name ?abbrev
                                                     :where
                                                     (or-join [?e ?email ?name ?abbrev]
-                                                             [?e :receipts.user/email ?email]
-                                                             [?e :receipts.user/name ?name]
+                                                             (and [?e :receipts.user/email ?originalEmail]
+                                                                  [(.toLowerCase ^String ?email) ?lowerCaseEmail]
+                                                                  [(.toLowerCase ^String ?originalEmail) ?lowerCaseEmail])
+                                                             (and [?e :receipts.user/name ?originalName]
+                                                                  [(.toLowerCase ^String ?name) ?lowerCaseName]
+                                                                  [(.toLowerCase ^String ?originalName) ?lowerCaseName])
                                                              [?e :receipts.user/abbrev ?abbrev])]}
-                         :post #vase/transact {:name :receipts-server.v1/user-create
-                                               :properties [:db/id
-                                                            :receipts.user/name
-                                                            :receipts.user/abbrev
-                                                            :receipts.user/email
-                                                            :receipts.user/isSysAdmin
-                                                            :receipts.user/isEditor
-                                                            :receipts.user/isConsumer]}}
+                         :post [;;; [TODO] This line may be needed.  See
+                                ;;; - https://github.com/cognitect-labs/vase/issues/68
+                                ;;; - https://github.com/cognitect-labs/vase/blob/master/test/resources/test_descriptor.edn#L120-L128
+                                ;;; - http://pedestal.io/api/pedestal.service/io.pedestal.http.html#var-json-body
+                                ;;; - https://github.com/cognitect-labs/vase/issues/45
+                                ;;; This may require undoing the patch in receipts-client.api-client/api-request
+                                ;;;
+                                ;;;- io.pedestal.http/json-body
+                                #vase/transact {:name :receipts-server.v1/user-create
+                                                :properties [:db/id
+                                                             :receipts.user/name
+                                                             :receipts.user/abbrev
+                                                             :receipts.user/email
+                                                             :receipts.user/isSysAdmin
+                                                             :receipts.user/isEditor
+                                                             :receipts.user/isConsumer]}]}
 
                 "/categories" {:get #vase/query {:name :receipts-server.v1/categories-get
                                                  :query [:find (pull ?e [*])
@@ -103,8 +115,7 @@
                 "/vendor" {:get #vase/query {:name :receipts-server.v1/vendor-get
                                                :params [name]
                                                :query  [:find (pull ?e [*])
-                                                        :in $ ?name
-                                                        :where [?e :receipts.vendor/name ?name]]}
+                                                        :in $ ?name :where [?e :receipts.vendor/name ?name]]}
                              :post #vase/transact {:name :receipts-server.v1/vendor-create
                                                    :properties [:db/id
                                                                 :receipts.vendor/name
@@ -113,11 +124,8 @@
 
 
                 "/paymentMethods" {:get #vase/query {:name :receipts-server.v1/paymentMethods-get
-                                                     :params []
-                                                     :query [:find ?e ?name ?abbrev
-                                                             :where
-                                                             [?e :receipts.paymentMethod/name ?name]
-                                                             [?e :receipts.paymentMethod/abbrev ?abbrev]]}}
+                                                     :query [:find  (pull ?e [*])
+                                                             :where [?e :receipts.paymentMethod/name]]}}
 
                 "/paymentMethod" {:get #vase/query {:name :receipts-server.v1/paymentMethod-get
                                                     :params [name]
@@ -131,7 +139,6 @@
                                                                      :receipts.paymentMethod/abbrev]}}
 
                 "/currencies" {:get #vase/query {:name :receipts-server.v1/currencies-get
-                                                 :params []
                                                  :query [:find (pull ?e [*])
                                                          :where [?e :receipts.currency/name]]}}
 
@@ -149,7 +156,6 @@
                                                                 :receipts.currency/abbrev]}}
 
                 "/purchases" {:get #vase/query {:name :receipts-server.v1/purchases-get
-                                                :params []
                                                 :query [:find (pull ?e [*])
                                                         :where [?e :receipts.purchase/uid]]}}
 
@@ -180,10 +186,10 @@
                                                                  :receipts.purchase/currency
                                                                  :receipts.purchase/category
                                                                  :receipts.purchase/vendor
-                                                                 :receipts.purchase/paid-by
+                                                                 :receipts.purchase/paidBy
                                                                  :receipts.purchase/date
                                                                  :receipts.purchase/comment
-                                                                 :receipts.purchase/for-whom ]}]}
+                                                                 :receipts.purchase/forWhom]}]}
 
                 "/capture" {:get #vase/respond {:name :example.v1/url-param-example
                                                 :params [date]

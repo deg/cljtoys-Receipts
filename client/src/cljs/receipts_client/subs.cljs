@@ -11,3 +11,33 @@
  :active-panel
  (fn [db _]
    (:active-panel db)))
+
+(re-frame/reg-sub
+ :history
+ (fn [db _]
+   (:history db)))
+
+(re-frame/reg-sub
+ :categories
+ (fn categories [db _]
+   (get-in db [:schema :categories] db)))
+
+(re-frame/reg-sub
+ :vendors
+ (fn vendors [db _]
+   (get-in db [:schema :vendors] db)))
+
+(re-frame/reg-sub
+ :users
+ (fn users [db _]
+   (get-in db [:schema :users] db)))
+
+(re-frame/reg-sub
+ :payment-methods
+ (fn payment-methods [db _]
+   (get-in db [:schema :payment-methods] db)))
+
+(re-frame/reg-sub
+ :current-receipt
+ (fn current-receipt [db _]
+   (get db :current-receipt)))

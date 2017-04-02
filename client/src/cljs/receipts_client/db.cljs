@@ -1,4 +1,4 @@
 (ns receipts-client.db)
 
 (def default-db
-  {:name "re-frame"})
+  {:name "Receipts v3.0"})

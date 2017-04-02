@@ -16,14 +16,20 @@
 
 (defn app-routes []
   (secretary/set-config! :prefix "#")
-  ;; --------------------
-  ;; define routes here
-  (defroute "/" []
-    (re-frame/dispatch [:set-active-panel :home-panel]))
+
+  (defroute "/home" []
+    (re-frame/dispatch [:set-active-panel :home]))
+
+  (defroute "/history" []
+    (re-frame/dispatch [:set-active-panel :history]))
+
+  (defroute "/setup" []
+    (re-frame/dispatch [:set-active-panel :setup]))
 
   (defroute "/about" []
-    (re-frame/dispatch [:set-active-panel :about-panel]))
+    (re-frame/dispatch [:set-active-panel :about]))
 
-
-  ;; --------------------
   (hook-browser-navigation!))
+
+(defn goto-page [url-fragment]
+  (aset js/window "location" (str "/#/" url-fragment #_(if (= url-fragment "home") "" url-fragment))))

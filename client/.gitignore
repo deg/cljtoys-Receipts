@@ -1,6 +1,8 @@
-/*.log
-/target
 /*-init.clj
+/*.log
+/.lein-failures
+/.nrepl-port
 /resources/public/js/compiled
+/target
 out
 resources/public/css/screen.css
