@@ -124,9 +124,9 @@
        :children
        [[labelled "Paid by"
          [dropdown :multiple? false
-          :field-key :payment-method
+          :field-key :purchase/payment-method
           :subs-key :payment-methods
-          :schema-key :receipts.paymentMethod/name]]
+          :schema-key :paymentMethod/name]]
         [labelled "Date" [date-time-picker
                           :model (or (:date @current-receipt) (time/now))
                           :on-change #(re-frame/dispatch [:edit-current-receipt :date %])]]
@@ -136,23 +136,23 @@
                            :attr {:type "number"
                                   :step "0.01"}]]
         [labelled "Category" [dropdown :multiple? false
-                              :field-key :category
+                              :field-key :purchase/category
                               :subs-key :categories
-                              :schema-key :receipts.category/name]]
+                              :schema-key :category/name]]
         [labelled "Vendor" [dropdown :multiple? false
-                            :field-key :vendor
+                            :field-key :purchase/vendor
                             :subs-key :vendors
-                            :schema-key :receipts.vendor/name
-                            :filter-fn #(some #{(:category @current-receipt)} (:receipts.vendor/category %))]]
+                            :schema-key :vendor/name
+                            :filter-fn #(some #{(:purchase/category @current-receipt)} (:vendor/category %))]]
         [labelled "Comment" [re-com/input-text
                              :model (or (:comment @current-receipt) "")
                              :on-change #(re-frame/dispatch [:edit-current-receipt :comment %])
                              :attr {:type "text"}]]
         [labelled "For Whom" [dropdown :multiple? true
-                              :field-key :for-whom
+                              :field-key :purchase/forWhom
                               :subs-key :users
-                              :schema-label-key :receipts.user/name
-                              :schema-id-key :receipts.user/abbrev]]
+                              :schema-label-key :user/name
+                              :schema-id-key :user/abbrev]]
         [re-com/gap :size "8px"]
         [re-com/h-box
          :justify :center
@@ -199,7 +199,7 @@
    [:thead [:tr
             (map (fn [h] ^{:key h}[:td h])
                  ["Paid by" "Date" "Time" "Price" "Category" "Vendor" "Comment" "For Whom"])]]
-   [:tbody (map (fn [{:receipts.purchase/keys [paidBy date currency price category vendor comment forWhom] :as purchase}]
+   [:tbody (map (fn [{:purchase/keys [paidBy date currency price category vendor comment forWhom] :as purchase}]
                   (let [row-id (:db/id purchase)
                         id-fn (partial str row-id "-")]
                     ^{:key row-id} [:tr

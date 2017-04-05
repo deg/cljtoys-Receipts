@@ -10,8 +10,8 @@
    {:name ::date-conversion
     :enter (fn [context]
              (let [payloads (get-in context [:request :json-params :payload])
-                   payloads (map (fn [m] (if (:receipts.purchase/date m)
-                                           (update m :receipts.purchase/date instant/read-instant-date)
+                   payloads (map (fn [m] (if (:purchase/date m)
+                                           (update m :purchase/date instant/read-instant-date)
                                            m))
                                  payloads)]
                (assoc-in context [:request :json-params :payload] payloads)))}))

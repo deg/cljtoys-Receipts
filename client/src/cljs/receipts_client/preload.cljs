@@ -5,39 +5,47 @@
              [receipts-client.api-client :as api]
              [receipts-client.db :as db]))
 
+;; [TODO] Belongs in forthcoming utils library. Cribbed from photovu/src/cljc
+(defn assoc-if
+  "Like assoc, but takes pairs as a map, and only assocs non-nil values"
+  [m kvs]
+  (into m (remove (comp nil? val) kvs)))
+
 (defn User [name abbrev email sysAdmin? editor? consumer?]
-  [(api/post-user-request {:name name :abbrev abbrev :email email
-                           :sysAdmin? sysAdmin? :editor? editor? :consumer? consumer?}
-                          [:process-response])])
+  [(api/post-user-request
+    (assoc-if {}
+      {:user/name name :user/abbrev abbrev :user/email email
+       :user/sysAdmin? sysAdmin? :user/editor? editor? :user/consumer? consumer?})
+    [:process-response])])
 
 (defn- simple-vendor [name category]
-  {:name name :description "" :category category})
+  {:vendor/name name :description "" :vendor/category category})
 
 (defn Vendor [category name]
   [(api/post-vendor-request (simple-vendor name category) [:process-response])])
 
 (defn Category [category-name description vendor-names]
   (vector
-   (api/post-category-request {:name category-name :description description} [:process-response])
+   (api/post-category-request {:category/name category-name :category/description description} [:process-response])
    (let [vendor-requests (mapv #(simple-vendor % category-name) vendor-names)]
      (api/post-vendors-request vendor-requests [:process-response]))))
 
 (defn Payment-method [name abbrev]
-  [(api/post-payment-method-request {:name name :abbrev abbrev} [:process-response])])
+  [(api/post-payment-method-request {:paymentMethod/name name :paymentMethod/abbrev abbrev} [:process-response])])
 
 (defn Currency [name abbrev]
-  [(api/post-currency-request {:name name :abbrev abbrev} [:process-response])])
+  [(api/post-currency-request {:currency/name name :currency/abbrev abbrev} [:process-response])])
 
 (defn Purchase [uid price currency category vendor paid-by date comment for-whom]
-  [(api/post-purchase-request {:uid uid
-                               :price price
-                               :currency currency
-                               :category category
-                               :vendor vendor
-                               :paid-by paid-by
-                               :date date
-                               :comment comment
-                               :for-whom for-whom}
+  [(api/post-purchase-request {:purchase/uid uid
+                               :purchase/price price
+                               :purchase/currency currency
+                               :purchase/category category
+                               :purchase/vendor vendor
+                               :purchase/paid-by paid-by
+                               :purchase/date date
+                               :purchase/comment comment
+                               :purchase/for-whom for-whom}
                               [:process-response])])
 
 (defn initial-data []

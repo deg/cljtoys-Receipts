@@ -57,7 +57,7 @@
  :got-history
  (fn got-history [db [_ pull-response]]
    (let [response (response-from-pull pull-response)]
-     (assoc db :history (sort-by :receipts.purchase/date response)))))
+     (assoc db :history (sort-by :purchase/date response)))))
 
 (re-frame/reg-event-db
  :edit-current-receipt
