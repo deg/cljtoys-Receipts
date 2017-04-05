@@ -18,24 +18,29 @@
    (:history db)))
 
 (re-frame/reg-sub
+ :schema
+ (fn schema [db _]
+   (get db :schema)))
+
+(re-frame/reg-sub
  :categories
  (fn categories [db _]
-   (get-in db [:schema :categories] db)))
+   (get-in db [:schema :categories])))
 
 (re-frame/reg-sub
  :vendors
  (fn vendors [db _]
-   (get-in db [:schema :vendors] db)))
+   (get-in db [:schema :vendors])))
 
 (re-frame/reg-sub
  :users
  (fn users [db _]
-   (get-in db [:schema :users] db)))
+   (get-in db [:schema :users])))
 
 (re-frame/reg-sub
  :payment-methods
  (fn payment-methods [db _]
-   (get-in db [:schema :payment-methods] db)))
+   (get-in db [:schema :payment-methods])))
 
 (re-frame/reg-sub
  :current-receipt

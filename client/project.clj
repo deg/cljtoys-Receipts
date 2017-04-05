@@ -11,7 +11,8 @@
                  [ns-tracker "0.3.0"]
                  [cljs-ajax "0.5.8"]
                  [day8.re-frame/http-fx "0.1.3"]
-                 [com.andrewmcveigh/cljs-time "0.5.0-alpha2"]]
+                 [com.andrewmcveigh/cljs-time "0.5.0-alpha2"]
+                 [funcool/struct "1.0.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]

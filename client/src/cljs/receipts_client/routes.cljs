@@ -32,4 +32,5 @@
   (hook-browser-navigation!))
 
 (defn goto-page [url-fragment]
+  (re-frame/dispatch [:prepare-page url-fragment])
   (aset js/window "location" (str "/#/" url-fragment #_(if (= url-fragment "home") "" url-fragment))))

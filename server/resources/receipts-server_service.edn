@@ -5,35 +5,35 @@
  ;; --------------------
  {:vase/norms {:receipts/schema {:vase.norm/txes
                                  [#vase/schema-tx
-                                  [[:category/name        :one  :string :identity "Category name"]
-                                   [:category/description :one  :string :fulltext "Info about category"]
+                                  [[:category/name          :one  :string :identity "Category name"]
+                                   [:category/description   :one  :string :fulltext "Info about category"]
 
-                                   [:vendor/name          :one  :string :identity "Vendor name"]
-                                   [:vendor/description   :one  :string :fulltext "Description"]
-                                   [:vendor/category      :many :string           "Category of this vendor"]
+                                   [:vendor/name            :one  :string :identity "Vendor name"]
+                                   [:vendor/description     :one  :string :fulltext "Description"]
+                                   [:vendor/category        :many :string           "Category of this vendor"]
 
-                                   [:user/name            :one  :string :unique   "User name"]
-                                   [:user/abbrev          :one  :string :identity "Brief user name for Excel"]
-                                   [:user/email           :one  :string :unique   "User email"]
-                                   [:user/isSysAdmin      :one  :boolean          "User has full access"]
-                                   [:user/isEditor        :one  :boolean          "User can add entries"]
-                                   [:user/isConsumer      :one  :boolean          "User can be listed as purchaser"]
+                                   [:user/name              :one  :string :unique   "User name"]
+                                   [:user/abbrev            :one  :string :identity "Brief user name for Excel"]
+                                   [:user/email             :one  :string :unique   "User email"]
+                                   [:user/isSysAdmin        :one  :boolean          "User has full access"]
+                                   [:user/isEditor          :one  :boolean          "User can add entries"]
+                                   [:user/isConsumer        :one  :boolean          "User can be listed as purchaser"]
 
-                                   [:paymentMethod/name   :one  :string :unique   "Payment method name"]
-                                   [:paymentMethod/abbrev :one  :string :identity "Payment method name for Excel"]
+                                   [:paymentMethod/name     :one  :string :unique   "Payment method name"]
+                                   [:paymentMethod/abbrev   :one  :string :identity "Payment method name for Excel"]
 
-                                   [:currency/name        :one  :string :unique   "Currency name"]
-                                   [:currency/abbrev      :one  :string :identity "Brief currency name (e.g. USD or GBP)"]
+                                   [:currency/name          :one  :string :unique   "Currency name"]
+                                   [:currency/abbrev        :one  :string :identity "Brief currency name (e.g. USD or GBP)"]
 
-                                   [:purchase/uid         :one  :string :identity "Unique id, based on user and time"]
-                                   [:purchase/price       :one  :float            "Price"]
-                                   [:purchase/currency    :one  :string           "Dollars, Shekels, etc."]
-                                   [:purchase/category    :one  :string           "Categoory of purchase"]
-                                   [:purchase/vendor      :one  :string           "Vendor where purchased"]
-                                   [:purchase/paidBy      :one  :string           "Payment method ID"]
-                                   [:purchase/date        :one  :instant          "When purchased"]
-                                   [:purchase/comment     :one  :string :fulltext "Comment"]
-                                   [:purchase/forWhom     :many :string           "For whom purchased"]]]}}
+                                   [:purchase/uid           :one  :string :identity "Unique id, based on user and time"]
+                                   [:purchase/price         :one  :float            "Price"]
+                                   [:purchase/currency      :one  :string           "Dollars, Shekels, etc."]
+                                   [:purchase/category      :one  :string           "Categoory of purchase"]
+                                   [:purchase/vendor        :one  :string           "Vendor where purchased"]
+                                   [:purchase/paymentMethod :one  :string           "Payment method ID"]
+                                   [:purchase/date          :one  :instant          "When purchased"]
+                                   [:purchase/comment       :one  :string :fulltext "Comment"]
+                                   [:purchase/forWhom       :many :string           "For whom purchased"]]]}}
 
   ;; Global Specs for the API
   ;; ------------------------
@@ -161,24 +161,25 @@
 
                 "/purchase" {:get #vase/query {:name :receipts-server.v1/purchase-get
                                                :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
-                                                        [category "n/a"] [vendor "n/a"] [paidBy "n/a"]
+                                                        [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]
                                                         [date "n/a"] [comment "n/a"] [forWhom "n/a"]]
                                                :edn-coerce [date]
                                                :query [:find (pull ?e [*])
-                                                       :in $ ?uid ?price ?currency ?category ?vendor ?paidBy ?date ?comment ?forWhom
+                                                       :in $ ?uid ?price ?currency ?category ?vendor ?paymentMethod ?date ?comment ?forWhom
                                                        :where
                                                        (or-join [?e ?uid ?price ?currency ?category ?vendor
-                                                                 ?paid-by ?date ?comment ?for-whom]
+                                                                 ?paymentMethod ?date ?comment ?forWhom]
                                                                 [?e :purchase/uid ?uid]
                                                                 [?e :purchase/price ?price]
                                                                 [?e :purchase/currency ?currency]
                                                                 [?e :purchase/category ?category]
                                                                 [?e :purchase/vendor ?vendor]
-                                                                [?e :purchase/paidBy ?by]
+                                                                [?e :purchase/paymentMethod ?by]
                                                                 [?e :purchase/date ?date]
                                                                 [?e :purchase/comment ?comment]
-                                                                [?e :purchase/forWhom ?for-whom])]}
+                                                                [?e :purchase/forWhom ?forWhom])]}
                              :post [receipts-server.interceptors/date-conversion
+                                    receipts-server.interceptors/float-conversion
                                     #vase/transact {:name :receipts-server.v1/purchase-create
                                                     :properties [:db/id
                                                                  :purchase/uid
@@ -186,7 +187,7 @@
                                                                  :purchase/currency
                                                                  :purchase/category
                                                                  :purchase/vendor
-                                                                 :purchase/paidBy
+                                                                 :purchase/paymentMethod
                                                                  :purchase/date
                                                                  :purchase/comment
                                                                  :purchase/forWhom]}]}

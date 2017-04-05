@@ -7,7 +7,8 @@
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
    [re-com.core :as re-com]
-   [receipts-client.routes :as routes]))
+   [receipts-client.routes :as routes]
+   [struct.core :as struct]))
 
 
 ;; home
@@ -27,12 +28,6 @@
    :label "Preload database"
    :tooltip "Install initial DB (you should not need this)"
    :on-click #(re-frame/dispatch [:preload-base])])
-
-(defn schema-button []
-  [re-com/button
-   :label "Get DB Schema"
-   :tooltip "Learn DB schema"
-   :on-click #(re-frame/dispatch [:get-base])])
 
 (defn history-button []
   [re-com/button
@@ -115,24 +110,38 @@
                                       @schema)))
      :on-change #(re-frame/dispatch [:edit-current-receipt field-key %])]))
 
+;;; See https://funcool.github.io/struct/latest/
+;;; [TODO] Replace with spec, asap.
+(def complete-receipt
+  {:purchase/paymentMethod [[struct/required :message "'Paid by' missing"] struct/string]
+   :purchase/date [struct/required struct/positive]
+   :purchase/category [struct/required struct/string]
+   :purchase/vendor [struct/required struct/string]
+   :purchase/forWhom [struct/required struct/set]})
+
+(defn validate-receipt [receipt]
+  (struct/validate receipt complete-receipt))
+
+(defn valid-receipt? [receipt]
+  (struct/valid? receipt complete-receipt))
+
 (defn receipt-page []
-  (let [current-receipt (re-frame/subscribe [:current-receipt])
-        vendors (re-frame/subscribe [:vendors])]
+  (let [current-receipt (re-frame/subscribe [:current-receipt])]
     (fn []
       [re-com/v-box
        :gap "3px"
        :children
        [[labelled "Paid by"
          [dropdown :multiple? false
-          :field-key :purchase/payment-method
+          :field-key :purchase/paymentMethod
           :subs-key :payment-methods
           :schema-key :paymentMethod/name]]
         [labelled "Date" [date-time-picker
-                          :model (or (:date @current-receipt) (time/now))
-                          :on-change #(re-frame/dispatch [:edit-current-receipt :date %])]]
+                          :model (or (:purchase/date @current-receipt) (time/now))
+                          :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/date %])]]
         [labelled "Price" [re-com/input-text
-                           :model (or (:price @current-receipt) "0.00")
-                           :on-change #(re-frame/dispatch [:edit-current-receipt :price %])
+                           :model (or (:purchase/price @current-receipt) "0.00")
+                           :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
                            :attr {:type "number"
                                   :step "0.01"}]]
         [labelled "Category" [dropdown :multiple? false
@@ -145,21 +154,24 @@
                             :schema-key :vendor/name
                             :filter-fn #(some #{(:purchase/category @current-receipt)} (:vendor/category %))]]
         [labelled "Comment" [re-com/input-text
-                             :model (or (:comment @current-receipt) "")
-                             :on-change #(re-frame/dispatch [:edit-current-receipt :comment %])
+                             :model (or (:purchase/comment @current-receipt) "")
+                             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
                              :attr {:type "text"}]]
         [labelled "For Whom" [dropdown :multiple? true
                               :field-key :purchase/forWhom
                               :subs-key :users
                               :schema-label-key :user/name
                               :schema-id-key :user/abbrev]]
+        (let [validation-errors (first (validate-receipt @current-receipt))]
+          (when validation-errors
+            [:div (str validation-errors)]))
         [re-com/gap :size "8px"]
         [re-com/h-box
          :justify :center
          :children
          [[re-com/button
-           :disabled? false #_(not (valid-receipt (get-state [:current-receipt])))
-           :on-click #(prn "NYI") ;#(submit-receipt (get-state [:current-receipt]))
+           :disabled? (not (valid-receipt? @current-receipt))
+           :on-click #(re-frame/dispatch [:submit-receipt @current-receipt])
            :label "Submit Receipt"]]]]])))
 
 (defn home-panel []
@@ -178,7 +190,7 @@
 
 (defn field-output [field value]
   (case field
-    :for-whom (str/join ", " value)
+    :forWhom (str/join ", " value)
     :date (time-format/unparse date-format (time-coerce/to-date-time value))
     :time (time-format/unparse time-format (time-coerce/to-date-time value))
     :price (let [[currency amount] value
@@ -199,18 +211,18 @@
    [:thead [:tr
             (map (fn [h] ^{:key h}[:td h])
                  ["Paid by" "Date" "Time" "Price" "Category" "Vendor" "Comment" "For Whom"])]]
-   [:tbody (map (fn [{:purchase/keys [paidBy date currency price category vendor comment forWhom] :as purchase}]
+   [:tbody (map (fn [{:purchase/keys [paymentMethod date currency price category vendor comment forWhom] :as purchase}]
                   (let [row-id (:db/id purchase)
                         id-fn (partial str row-id "-")]
                     ^{:key row-id} [:tr
-                                    (history-cell id-fn :paid-by paidBy)
+                                    (history-cell id-fn :paymentMethod paymentMethod)
                                     (history-cell id-fn :date date)
                                     (history-cell id-fn :time date)
                                     (history-cell id-fn :price [currency price])
                                     (history-cell id-fn :category category)
                                     (history-cell id-fn :vendor vendor)
                                     (history-cell id-fn :comment comment)
-                                    (history-cell id-fn :for-whom forWhom)]))
+                                    (history-cell id-fn :forWhom forWhom)]))
                 purchases)]])
 
 (defn history-panel []
@@ -226,8 +238,7 @@
   [re-com/v-box
    :gap "1em"
    :children [(panel-title "Setup")
-              [preload-button]
-              [schema-button]]])
+              [preload-button]]])
 
 (defn wrap-page [page]
   [re-com/border
@@ -257,9 +268,13 @@
        :on-change #(routes/goto-page (name %))])))
 
 (defn main-panel []
-  [re-com/v-box
-   :height "100%"
-   :children [[app-title]
-              [tabs-row]
-              [tab-panel]]] )
+  (let [schema (re-frame/subscribe [:schema])]
+    (fn []
+      (when-not @schema
+        (re-frame/dispatch [:get-schema]))
+      [re-com/v-box
+       :height "100%"
+       :children [[app-title]
+                  [tabs-row]
+                  [tab-panel]]])) )
 

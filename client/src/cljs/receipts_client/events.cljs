@@ -24,8 +24,8 @@
      :db  (assoc db :loading? true)}))
 
 (re-frame/reg-event-fx
- :get-base
-  (fn get-base [{db :db} _]
+ :get-schema
+  (fn get-schema [{db :db} _]
     {:http-xhrio [(api/get-request "categories" {} [:got-schema :categories])
                   (api/get-request "currencies" {} [:got-schema :currencies])
                   (api/get-request "paymentMethods" {} [:got-schema :payment-methods])
@@ -33,6 +33,15 @@
                   (api/get-request "vendors" {} [:got-schema :vendors])
                   ]
      :db  (assoc db :loading? true)}))
+
+(re-frame/reg-event-fx
+ :prepare-page
+ (fn prepare_page [{db :db} [_ page]]
+   (case page
+     "history"
+     {:dispatch [:get-history]}
+     {:db db})))
+
 
 (re-frame/reg-event-fx
  :get-history
@@ -63,6 +72,22 @@
  :edit-current-receipt
  (fn edit-current-receipt [db [_ field value]]
    (assoc-in db [:current-receipt field] value)))
+
+(re-frame/reg-event-fx
+ :submit-receipt
+ (fn submit-receipt [{db :db} [_ receipt]]
+   {:http-xhrio (api/post-purchase-request
+                 (assoc receipt
+                        ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
+                        :purchase/date (.toJSON (:purchase/date receipt))
+                        ;; [TODO]  Need better UID
+                        :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
+                        :purchase/price (js/parseFloat (:purchase/price receipt))
+                        ;; [TODO] temp
+                        :purchase/currency "NIS")
+                 [:process-response])
+    :db (assoc db
+               :previous-receipt receipt)}))
 
 (re-frame/reg-event-db
  :process-response
