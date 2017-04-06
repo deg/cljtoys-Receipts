@@ -39,7 +39,7 @@
    ;;
    ;; "http://localhost:8080"
    ;;
-   ;;::http/allowed-origins ["scheme://host:port"]
+   ::http/allowed-origins ["http://localhost:3000"]
 
    ::route-set routes
    ::vase/api-root "/api"

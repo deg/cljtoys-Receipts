@@ -42,8 +42,7 @@
                    [com.cemerick/piggieback "0.2.1"]]
 
     :plugins      [[lein-figwheel "0.5.9"]
-                   [lein-doo "0.1.7"]]
-    }}
+                   [lein-doo "0.1.7"]]}}
 
   :cljsbuild
   {:builds
@@ -72,7 +71,4 @@
      :compiler     {:main          receipts-client.runner
                     :output-to     "resources/public/js/compiled/test.js"
                     :output-dir    "resources/public/js/compiled/test/out"
-                    :optimizations :none}}
-    ]}
-
-  )
+                    :optimizations :none}}]})
