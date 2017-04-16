@@ -49,24 +49,15 @@
    {:http-xhrio [(api/get-request "purchases" {} [:got-history])]}))
 
 
-(defn response-from-pull [pull-response]
-  (let [relevant (first pull-response)
-        cruft1 (next pull-response)
-        cruft2 (not-empty (remove nil? (map next relevant)))]
-    (when (or cruft1 cruft2)
-      (prn "ERROR: Unexpected pull response: " pull-response))
-    (mapv first relevant)))
-
 (re-frame/reg-event-db
  :got-schema
  (fn got-schema [db [_ section pull-response]]
-   (assoc-in db [:schema section] (response-from-pull pull-response))))
+   (assoc-in db [:schema section] pull-response)))
 
 (re-frame/reg-event-db
  :got-history
  (fn got-history [db [_ pull-response]]
-   (let [response (response-from-pull pull-response)]
-     (assoc db :history (sort-by :purchase/date response)))))
+   (assoc db :history (sort-by :purchase/date pull-response))))
 
 (re-frame/reg-event-db
  :edit-current-receipt

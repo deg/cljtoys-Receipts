@@ -10,7 +10,7 @@
     {(subs (str k) 1) v}
     {k v}))
 
-(defn api-request [method api params on-success]
+(defn- api-request [method api params on-success]
   ;; [TODO] Fixup how we are using Transit and namespaced keywords, to avoid this ugliness
   ;; This is code location #1 for this issue
   (let [params (if (= method :get)

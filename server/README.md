@@ -2,6 +2,17 @@
 
 FIXME
 
+## Project setup notes
+
+See below, from the template. But, note:
+
+1. This project uses the bleeding-edge snapshot of Vase.  So, you need
+```
+git clone git@github.com:cognitect-labs/vase.git
+cd vase
+lein install`
+```
+
 ## Getting Started
 
 1. Start the application: `lein run`
@@ -17,7 +28,6 @@ FIXME
 
 To configure logging see config/logback.xml. By default, the app logs to stdout and logs/.
 To learn more about configuring Logback, read its [documentation](http://logback.qos.ch/documentation.html).
-
 
 ## Developing your service
 

@@ -52,23 +52,23 @@
                                          :query [:find ?e ?v
                                                  :where [?e :db/ident ?v]]}}
                 "/entities" {:get #vase/query {:name :receipts-server.v1/entities-get
-                                            :query [:find (pull ?e [*])
-                                                    :where (or [?e :user/name]
-                                                               [?e :category/name]
-                                                               [?e :vendor/name]
-                                                               [?e :paymentMethod/name]
-                                                               [?e :currency/name]
-                                                               [?e :purchase/uid])]}}
+                                               :query [:find [(pull ?e [*]) ...]
+                                                       :where (or [?e :user/name]
+                                                                  [?e :category/name]
+                                                                  [?e :vendor/name]
+                                                                  [?e :paymentMethod/name]
+                                                                  [?e :currency/name]
+                                                                  [?e :purchase/uid])]}}
                 "/entity" {:delete #vase/transact {:name :receipts-server.v1/entity-delete
                                                    :db-op :vase/retract-entity
                                                    :properties [:db/id]}}
 
                 "/users" {:get #vase/query {:name :receipts-server.v1/users-get
-                                            :query [:find (pull ?e [*])
+                                            :query [:find [(pull ?e [*]) ...]
                                                     :where [?e :user/name]]}}
                 "/user" {:get #vase/query {:name :receipts-server.v1/user-get
                                            :params [[email "n/a"] [name "n/a"] [abbrev "n/a"]]
-                                           :query  [:find (pull ?e [*])
+                                           :query  [:find [(pull ?e [*]) ...]
                                                     :in $ ?email ?name ?abbrev
                                                     :where
                                                     (or-join [?e ?email ?name ?abbrev]
@@ -97,11 +97,11 @@
                                                              :user/isConsumer]}]}
 
                 "/categories" {:get #vase/query {:name :receipts-server.v1/categories-get
-                                                 :query [:find (pull ?e [*])
+                                                 :query [:find [(pull ?e [*]) ...]
                                                          :where [?e :category/name]]}}
                 "/category" {:get #vase/query {:name :receipts-server.v1/category-get
                                                :params [name]
-                                               :query  [:find (pull ?e [*])
+                                               :query  [:find [(pull ?e [*]) ...]
                                                         :in $ ?name
                                                         :where [?e :category/name ?name]]}
                              :post #vase/transact {:name :receipts-server.v1/category-create
@@ -110,21 +110,21 @@
                                                                 :category/description]}}
 
                 "/vendors" {:get #vase/query {:name :receipts-server.v1/vendors-get
-                                                 :query [:find (pull ?e [*])
-                                                         :where [?e :vendor/name]]}}
+                                              :query [:find [(pull ?e [*]) ...]
+                                                      :where [?e :vendor/name]]}}
                 "/vendor" {:get #vase/query {:name :receipts-server.v1/vendor-get
-                                               :params [name]
-                                               :query  [:find (pull ?e [*])
-                                                        :in $ ?name :where [?e :vendor/name ?name]]}
-                             :post #vase/transact {:name :receipts-server.v1/vendor-create
-                                                   :properties [:db/id
-                                                                :vendor/name
-                                                                :vendor/description
-                                                                :vendor/category]}}
+                                             :params [name]
+                                             :query  [:find [(pull ?e [*]) ...]
+                                                      :in $ ?name :where [?e :vendor/name ?name]]}
+                           :post #vase/transact {:name :receipts-server.v1/vendor-create
+                                                 :properties [:db/id
+                                                              :vendor/name
+                                                              :vendor/description
+                                                              :vendor/category]}}
 
 
                 "/paymentMethods" {:get #vase/query {:name :receipts-server.v1/paymentMethods-get
-                                                     :query [:find  (pull ?e [*])
+                                                     :query [:find  [(pull ?e [*]) ...]
                                                              :where [?e :paymentMethod/name]]}}
 
                 "/paymentMethod" {:get #vase/query {:name :receipts-server.v1/paymentMethod-get
@@ -139,12 +139,12 @@
                                                                      :paymentMethod/abbrev]}}
 
                 "/currencies" {:get #vase/query {:name :receipts-server.v1/currencies-get
-                                                 :query [:find (pull ?e [*])
+                                                 :query [:find [(pull ?e [*]) ...]
                                                          :where [?e :currency/name]]}}
 
                 "/currency" {:get #vase/query {:name :receipts-server.v1/currency-get
                                                :params [[name "n/a"] [abbrev "n/a"]]
-                                               :query [:find (pull ?e [*])
+                                               :query [:find [(pull ?e [*]) ...]
                                                        :in $ ?name ?abbrev
                                                        :where
                                                        (or-join [?e ?name ?abbrev]
@@ -156,7 +156,7 @@
                                                                 :currency/abbrev]}}
 
                 "/purchases" {:get #vase/query {:name :receipts-server.v1/purchases-get
-                                                :query [:find (pull ?e [*])
+                                                :query [:find [(pull ?e [*]) ...]
                                                         :where [?e :purchase/uid]]}}
 
                 "/purchase" {:get #vase/query {:name :receipts-server.v1/purchase-get
@@ -164,7 +164,7 @@
                                                         [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]
                                                         [date "n/a"] [comment "n/a"] [forWhom "n/a"]]
                                                :edn-coerce [date]
-                                               :query [:find (pull ?e [*])
+                                               :query [:find [(pull ?e [*]) ...]
                                                        :in $ ?uid ?price ?currency ?category ?vendor ?paymentMethod ?date ?comment ?forWhom
                                                        :where
                                                        (or-join [?e ?uid ?price ?currency ?category ?vendor
