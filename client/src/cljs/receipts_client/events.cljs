@@ -1,5 +1,6 @@
 (ns receipts-client.events
   (:require  [ajax.core :as ajax]
+             [cljs-time.core :as time]
              [day8.re-frame.http-fx]
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
@@ -11,10 +12,14 @@
  (fn  [_ _]
    db/default-db))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  :set-active-panel
- (fn [db [_ active-panel]]
-   (assoc db :active-panel active-panel)))
+ (fn [{db :db} [_ active-panel]]
+   (into {:db (assoc db :active-panel active-panel)}
+         (case active-panel
+           :history {:dispatch [:get-history]}
+           :home {:dispatch [:submitted-receipt]}
+           {}))))
 
 
 (re-frame/reg-event-fx
@@ -33,15 +38,6 @@
                   (api/get-request "vendors" {} [:got-schema :vendors])
                   ]
      :db  (assoc db :loading? true)}))
-
-(re-frame/reg-event-fx
- :prepare-page
- (fn prepare_page [{db :db} [_ page]]
-   (case page
-     "history"
-     {:dispatch [:get-history]}
-     {:db db})))
-
 
 (re-frame/reg-event-fx
  :get-history
@@ -76,9 +72,22 @@
                         :purchase/price (js/parseFloat (:purchase/price receipt))
                         ;; [TODO] temp
                         :purchase/currency "NIS")
-                 [:process-response])
+                 [:submitted-receipt]
+                 ;; [TODO] Need to handle server error, and restore previous receipt
+                 ;; [TODO] Need to go to page that prevents new data entry until previous processed
+                 )
     :db (assoc db
                :previous-receipt receipt)}))
+
+(defn reset-receipt [receipt]
+  (assoc
+   (dissoc receipt :purchase/price :purchase/category :purchase/vendor :purchase/forWhom :purchase/comment)
+   :purchase/date (time/now)))
+
+(re-frame/reg-event-db
+ :submitted-receipt
+ (fn submitted-receipt [db [_ response]]
+   (update db :current-receipt reset-receipt)))
 
 (re-frame/reg-event-db
  :process-response

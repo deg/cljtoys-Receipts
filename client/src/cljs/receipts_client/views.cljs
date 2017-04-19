@@ -35,12 +35,18 @@
    :tooltip "yadda yadda"
    :on-click #(re-frame/dispatch [:get-history])])
 
-(defn labelled [label component]
-  [re-com/h-box
-   :width "100%"
-   :gap "1em"
-   :children [[re-com/label :width "8em ":label (str label (if (str/blank? label) "" ": "))]
-              component]])
+(defn labelled [label error component]
+  (fn [label error component]
+    [re-com/h-box
+     :width "100%"
+     :gap "1em"
+     :children [[re-com/label
+                 :class (if error "errmsg" "")
+                 :width "8em "
+                 :label (str label (if (str/blank? label) "" ": "))]
+                [re-com/v-box :children [component
+                                         (when error
+                                           [re-com/label :class "errmsg" :label error])]]]]))
 
 ;;; Per re-com, new-date-time is a goog.date.Date, while new-time is an integer encoding
 ;;; (+ minutes (* 100 hours)).
@@ -114,10 +120,10 @@
 ;;; [TODO] Replace with spec, asap.
 (def complete-receipt
   {:purchase/paymentMethod [[struct/required :message "'Paid by' missing"] struct/string]
-   :purchase/date [struct/required struct/positive]
-   :purchase/category [struct/required struct/string]
-   :purchase/vendor [struct/required struct/string]
-   :purchase/forWhom [struct/required struct/set]})
+   :purchase/date [[struct/required :message "Please specify date"] struct/positive]
+   :purchase/category [[struct/required :message  "Category missing"] struct/string]
+   :purchase/vendor [[struct/required :message  "Choose vendor after specifying category"] struct/string]
+   :purchase/forWhom [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
 
 (defn validate-receipt [receipt]
   (struct/validate receipt complete-receipt))
@@ -128,51 +134,62 @@
 (defn receipt-page []
   (let [current-receipt (re-frame/subscribe [:current-receipt])]
     (fn []
-      [re-com/v-box
-       :gap "3px"
-       :children
-       [[labelled "Paid by"
-         [dropdown :multiple? false
-          :field-key :purchase/paymentMethod
-          :subs-key :payment-methods
-          :schema-key :paymentMethod/name]]
-        [labelled "Date" [date-time-picker
-                          :model (or (:purchase/date @current-receipt) (time/now))
-                          :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/date %])]]
-        [labelled "Price" [re-com/input-text
-                           :model (or (:purchase/price @current-receipt) "0.00")
-                           :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
-                           :attr {:type "number"
-                                  :step "0.01"}]]
-        [labelled "Category" [dropdown :multiple? false
-                              :field-key :purchase/category
-                              :subs-key :categories
-                              :schema-key :category/name]]
-        [labelled "Vendor" [dropdown :multiple? false
-                            :field-key :purchase/vendor
-                            :subs-key :vendors
-                            :schema-key :vendor/name
-                            :filter-fn #(some #{(:purchase/category @current-receipt)} (:vendor/category %))]]
-        [labelled "Comment" [re-com/input-text
-                             :model (or (:purchase/comment @current-receipt) "")
-                             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
-                             :attr {:type "text"}]]
-        [labelled "For Whom" [dropdown :multiple? true
-                              :field-key :purchase/forWhom
-                              :subs-key :users
-                              :schema-label-key :user/name
-                              :schema-id-key :user/abbrev]]
-        (let [validation-errors (first (validate-receipt @current-receipt))]
-          (when validation-errors
-            [:div (str validation-errors)]))
-        [re-com/gap :size "8px"]
-        [re-com/h-box
-         :justify :center
+      (let [validation-errors (first (validate-receipt @current-receipt))]
+        [re-com/v-box
+         :gap "3px"
          :children
-         [[re-com/button
-           :disabled? (not (valid-receipt? @current-receipt))
-           :on-click #(re-frame/dispatch [:submit-receipt @current-receipt])
-           :label "Submit Receipt"]]]]])))
+         [[labelled "Paid by"
+           (:purchase/paymentMethod validation-errors)
+           [dropdown :multiple? false
+            :field-key :purchase/paymentMethod
+            :subs-key :payment-methods
+            :schema-key :paymentMethod/name]]
+          [labelled "Date"
+           (:purchase/date validation-errors)
+           [date-time-picker
+            :model (or (:purchase/date @current-receipt) (time/now))
+            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/date %])]]
+          [labelled "Price"
+           (:purchase/price validation-errors)
+           [re-com/input-text
+            :model (or (:purchase/price @current-receipt) "0.00")
+            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
+            :attr {:type "number"
+                   :step "0.01"}]]
+          [labelled "Category"
+           (:purchase/category validation-errors)
+           [dropdown :multiple? false
+            :field-key :purchase/category
+            :subs-key :categories
+            :schema-key :category/name]]
+          [labelled "Vendor"
+           (:purchase/vendor validation-errors)
+           [dropdown :multiple? false
+            :field-key :purchase/vendor
+            :subs-key :vendors
+            :schema-key :vendor/name
+            :filter-fn #(some #{(:purchase/category @current-receipt)} (:vendor/category %))]]
+          [labelled "Comment"
+           (:purchase/comment validation-errors)
+           [re-com/input-text
+            :model (or (:purchase/comment @current-receipt) "")
+            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
+            :attr {:type "text"}]]
+          [labelled "For Whom"
+           (:purchase/forWhom validation-errors)
+           [dropdown :multiple? true
+            :field-key :purchase/forWhom
+            :subs-key :users
+            :schema-label-key :user/name
+            :schema-id-key :user/abbrev]]
+          [re-com/gap :size "8px"]
+          [re-com/h-box
+           :justify :center
+           :children
+           [[re-com/button
+             :disabled? (not (valid-receipt? @current-receipt))
+             :on-click #(re-frame/dispatch [:submit-receipt @current-receipt])
+             :label "Submit Receipt"]]]]]))))
 
 (defn home-panel []
   [re-com/v-box
@@ -265,7 +282,7 @@
       [re-com/horizontal-pill-tabs
        :tabs tabs
        :model (or @active-panel :home)
-       :on-change #(routes/goto-page (name %))])))
+       :on-change #(routes/goto-page %)])))
 
 (defn main-panel []
   (let [schema (re-frame/subscribe [:schema])]
