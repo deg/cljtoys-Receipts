@@ -1,7 +1,13 @@
 (ns receipts-client.api-client
   (:require [ajax.core :as ajax]))
 
-(def api-root "http://localhost:8080/api/receipts-server/v1/")
+(def production-api-root "http://lightsail-1.degel.com:8080/api/receipts-server/v1/")
+(def development-api-root "http://localhost:8080/api/receipts-server/v1/")
+(defn api-root [server]
+  (case server
+    :production production-api-root
+    :development development-api-root
+    nil))
 (def api-timeout 5000)
 
 (defn namespaced->str [[k v]]
@@ -10,14 +16,14 @@
     {(subs (str k) 1) v}
     {k v}))
 
-(defn- api-request [method api params on-success]
+(defn- api-request [method server api params on-success]
   ;; [TODO] Fixup how we are using Transit and namespaced keywords, to avoid this ugliness
   ;; This is code location #1 for this issue
   (let [params (if (= method :get)
                  params
                  (into {} (map namespaced->str params)))]
     {:method method
-     :uri (str api-root api)
+     :uri (str (api-root server) api)
      :params (if (or (= method :get)
                      (:payload params))
                params
@@ -40,51 +46,53 @@
 
 ;; [TODO] Refactor this repeated code into an engine
 
-(defn get-user-request [{:user/keys [name abbrev email] :as params} on-success]
-  (get-request "user" params on-success))
+(defn get-user-request [server {:user/keys [name abbrev email] :as params} on-success]
+  (get-request server "user" params on-success))
 
-(defn post-user-request [{:user/keys [name abbrev email sysAdmin? editor? consumer?] :as params} on-success]
-  (post-request "user" params on-success))
+(defn post-user-request [server {:user/keys [name abbrev email sysAdmin? editor? consumer?] :as params} on-success]
+  (post-request server "user" params on-success))
 
-(defn get-vendor-request [{:vendor/keys [name] :as params} on-success]
-  (get-request "vendor" params on-success))
+(defn get-vendor-request [server {:vendor/keys [name] :as params} on-success]
+  (get-request server "vendor" params on-success))
 
-(defn post-vendor-request [{:vendor/keys [name description category] :as params} on-success]
-  (post-request "vendor" params on-success))
+(defn post-vendor-request [server {:vendor/keys [name description category] :as params} on-success]
+  (post-request server "vendor" params on-success))
 
-(defn post-vendors-request [vendors on-success]
+(defn post-vendors-request [server vendors on-success]
   ;; [TODO] Barf! Try to use Transit, instead of JSON to clean up this sty
   ;; This is code location #3 for this issue
-  (post-request "vendor" {:payload
-                          (mapv (fn [vendor]
-                                  (into {} (map namespaced->str vendor)))
-                                vendors)}
+  (post-request server "vendor" {:payload
+                                 (mapv (fn [vendor]
+                                         (into {} (map namespaced->str vendor)))
+                                       vendors)}
                 on-success))
 
-(defn get-category-request [{:category/keys [name] :as params} on-success]
-  (get-request "category" params on-success))
+(defn get-category-request [server {:category/keys [name] :as params} on-success]
+  (get-request server "category" params on-success))
 
-(defn post-category-request [{:category/keys [name description] :as params} on-success]
-  (post-request "category" params on-success))
+(defn post-category-request [server {:category/keys [name description] :as params} on-success]
+  (post-request server "category" params on-success))
 
-(defn get-payment-method-request [{:paymentMethod/keys [name abbrev] :as params} on-success]
-  (get-request "paymentMethod" params on-success))
+(defn get-payment-method-request [server {:paymentMethod/keys [name abbrev] :as params} on-success]
+  (get-request server "paymentMethod" params on-success))
 
-(defn post-payment-method-request [{:paymentMethod/keys [name abbrev] :as params} on-success]
-  (post-request "paymentMethod" params on-success))
+(defn post-payment-method-request [server {:paymentMethod/keys [name abbrev] :as params} on-success]
+  (post-request server "paymentMethod" params on-success))
 
-(defn get-currency-request [{:currency/keys [name abbrev] :as params} on-success]
-  (get-request "currency" params on-success))
+(defn get-currency-request [server {:currency/keys [name abbrev] :as params} on-success]
+  (get-request server "currency" params on-success))
 
-(defn post-currency-request [{:currency/keys [name abbrev] :as params} on-success]
-  (post-request "currency" params on-success))
+(defn post-currency-request [server {:currency/keys [name abbrev] :as params} on-success]
+  (post-request server "currency" params on-success))
 
-(defn get-purchase-request [{:purchase/keys
+(defn get-purchase-request [server
+                            {:purchase/keys
                              [uid price currency category vendor paid-by date comment for-whom] :as params}
                             on-success]
-  (get-request "purchase" params on-success))
+  (get-request server "purchase" params on-success))
 
-(defn post-purchase-request [{:purchase/keys
+(defn post-purchase-request [server
+                             {:purchase/keys
                               [uid price currency category vendor paid-by date comment for-whom] :as params}
                              on-success]
-  (post-request "purchase" params on-success))
+  (post-request server "purchase" params on-success))

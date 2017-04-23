@@ -6,7 +6,13 @@
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
              [receipts-client.db :as db]
-             [receipts-client.preload :as preload]))
+             [receipts-client.preload :as preload]
+             [receipts-client.routes :as routes]))
+
+(re-frame/reg-fx
+ :goto-page
+ (fn goto-page [[page server]]
+   (routes/goto-page page server)))
 
 (re-frame/reg-event-db
  :initialize-db
@@ -14,36 +20,50 @@
    db/default-db))
 
 (re-frame/reg-event-fx
- :set-active-panel
- (fn [{db :db} [_ active-panel]]
-   (into {:db (assoc db :active-panel active-panel)}
-         (case active-panel
+ :set-page
+ (fn [{db :db} [_ page server]]
+   (into {:db (assoc db
+                     :page page
+                     :server (or server (:server db)))
+          :goto-page [page server]}
+         (case page
            :history {:dispatch [:get-history]}
            :home {:dispatch [:submitted-receipt]}
            {}))))
+
+(re-frame/reg-event-fx
+ :toggle-server
+ (fn toggle-server [{db :db} _]
+   (let [server (case (:server db)
+                  :production :development
+                  :development :production
+                  :production)]
+     {:dispatch [:set-page (:page db) server]})))
 
 
 (re-frame/reg-event-fx
  :preload-base
   (fn preload-base [{db :db} _]
-    {:http-xhrio (preload/initial-data)
+    {:http-xhrio (preload/initial-data (:server db))
      :db  (assoc db :loading? true)}))
 
 (re-frame/reg-event-fx
  :get-schema
   (fn get-schema [{db :db} _]
-    {:http-xhrio [(api/get-request "categories" {} [:got-schema :categories])
-                  (api/get-request "currencies" {} [:got-schema :currencies])
-                  (api/get-request "paymentMethods" {} [:got-schema :payment-methods])
-                  (api/get-request "users" {} [:got-schema :users])
-                  (api/get-request "vendors" {} [:got-schema :vendors])
-                  ]
-     :db  (assoc db :loading? true)}))
+    (let [server (:server db)]
+      {:http-xhrio [(api/get-request server "categories" {} [:got-schema :categories])
+                    (api/get-request server "currencies" {} [:got-schema :currencies])
+                    (api/get-request server "paymentMethods" {} [:got-schema :payment-methods])
+                    (api/get-request server "users" {} [:got-schema :users])
+                    (api/get-request server "vendors" {} [:got-schema :vendors])
+                    ]
+       :db  (assoc db :loading? true)}
+      )))
 
 (re-frame/reg-event-fx
  :get-history
  (fn get-history [{db :db} _]
-   {:http-xhrio [(api/get-request "purchases" {} [:got-history])]}))
+   {:http-xhrio [(api/get-request (:server db) "purchases" {} [:got-history])]}))
 
 
 (re-frame/reg-event-db
@@ -64,7 +84,7 @@
 (re-frame/reg-event-fx
  :submit-receipt
  (fn submit-receipt [{db :db} [_ receipt]]
-   {:http-xhrio (api/post-purchase-request
+   {:http-xhrio (api/post-purchase-request (:server db)
                  (assoc receipt
                         ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
                         :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))

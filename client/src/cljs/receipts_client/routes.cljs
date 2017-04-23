@@ -14,23 +14,35 @@
        (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
+(defn qp-server [query-params]
+  (when (:server query-params)
+    (keyword (:server query-params))))
+
+(defn server-qp [server]
+  (str "server=" (name (or server :production))))
+
+(defn page-dispatch [page server]
+  (re-frame/dispatch [:set-page page server]))
+
 (defn app-routes []
   (secretary/set-config! :prefix "#")
 
-  (defroute "/home" []
-    (re-frame/dispatch [:set-active-panel :home]))
+  (defroute "/" [query-params]
+    (page-dispatch :home (qp-server query-params)))
 
-  (defroute "/history" []
-    (re-frame/dispatch [:set-active-panel :history]))
+  (defroute "/home" [query-params]
+    (page-dispatch :home (qp-server query-params)))
 
-  (defroute "/setup" []
-    (re-frame/dispatch [:set-active-panel :setup]))
+  (defroute "/history" [query-params]
+    (page-dispatch :history (qp-server query-params)))
 
-  (defroute "/about" []
-    (re-frame/dispatch [:set-active-panel :about]))
+  (defroute "/setup" [query-params]
+    (page-dispatch :setup (qp-server query-params)))
+
+  (defroute "/about" [query-params]
+    (page-dispatch :about (qp-server query-params)))
 
   (hook-browser-navigation!))
 
-(defn goto-page [page]
-  (re-frame/dispatch [:set-active-panel page])
-  (aset js/window "location" (str "/#/" (name page))))
+(defn goto-page [page server]
+  (aset js/window "location" (str "/#/" (name page) "?" (server-qp server))))

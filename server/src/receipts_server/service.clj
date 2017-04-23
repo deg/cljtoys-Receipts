@@ -37,9 +37,7 @@
    ;; string(s) specifying scheme, host and port for
    ;; allowed source(s):
    ;;
-   ;; "http://localhost:8080"
-   ;;
-   ::http/allowed-origins ["http://localhost:3000"]
+   ::http/allowed-origins ["http://localhost:3449" "http://lightsail-1.degel.com"]
 
    ::route-set routes
    ::vase/api-root "/api"

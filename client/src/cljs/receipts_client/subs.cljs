@@ -8,9 +8,14 @@
    (:name db)))
 
 (re-frame/reg-sub
- :active-panel
+ :page
  (fn [db _]
-   (:active-panel db)))
+   (:page db)))
+
+(re-frame/reg-sub
+ :server
+ (fn [db _]
+   (:server db)))
 
 (re-frame/reg-sub
  :history

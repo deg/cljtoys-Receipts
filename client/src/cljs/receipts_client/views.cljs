@@ -7,33 +7,27 @@
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
    [re-com.core :as re-com]
-   [receipts-client.routes :as routes]
    [struct.core :as struct]))
 
 
 ;; home
 
 (defn app-title []
-  (let [name (re-frame/subscribe [:name])]
+  (let [name (re-frame/subscribe [:name])
+        server (re-frame/subscribe [:server])]
     (fn []
       [re-com/title
-       :label @name
+       :label (str @name (when (= @server :development) " (local test server)"))
        :level :level1])))
 
 (defn panel-title [label]
   [re-com/title :label label :level :level2])
 
-(defn preload-button []
+(defn button [dispatch label tooltip]
   [re-com/button
-   :label "Preload database"
-   :tooltip "Install initial DB (you should not need this)"
-   :on-click #(re-frame/dispatch [:preload-base])])
-
-(defn history-button []
-  [re-com/button
-   :label "Get History"
-   :tooltip "yadda yadda"
-   :on-click #(re-frame/dispatch [:get-history])])
+   :label label
+   :tooltip tooltip
+   :on-click #(re-frame/dispatch dispatch)])
 
 (defn labelled [label error component]
   (fn [label error component]
@@ -248,14 +242,20 @@
       [re-com/v-box
        :gap "1em"
        :children [(panel-title "History")
-                  [history-button]
+                  (button [:get-history] "Get History" "Load history from server")
                   [history-table @history]]])))
 
 (defn setup-panel []
-  [re-com/v-box
-   :gap "1em"
-   :children [(panel-title "Setup")
-              [preload-button]]])
+  (let [server (re-frame/subscribe [:server])]
+    (fn []
+      (let [this-server  (case @server :production "production" :development "development" "???")
+            other-server (case @server :production "development" :development "production" "???")]
+        [re-com/v-box
+         :gap "1em"
+         :children [(panel-title "Setup")
+                    (button [:preload-base] "Preload database" "Install initial DB (you should not need this)")
+                    (button [:toggle-server] (str "Toggle server (now " this-server ")")
+                            (str "Switch to " other-server " server"))]]))))
 
 (defn wrap-page [page]
   [re-com/border
@@ -270,19 +270,20 @@
            {:id :about   :label "about"   :panel (wrap-page [about-panel])}])
 
 (defn tab-panel []
-  (let [active-panel (re-frame/subscribe [:active-panel])]
+  (let [page (re-frame/subscribe [:page])]
     (fn []
-      (:panel (or (first (filter #(= (:id %) @active-panel)
+      (:panel (or (first (filter #(= (:id %) @page)
                                  tabs))
                   :home-panel)))))
 
 (defn tabs-row []
-  (let [active-panel (re-frame/subscribe [:active-panel])]
+  (let [page (re-frame/subscribe [:page])
+        server (re-frame/subscribe [:server])]
     (fn []
       [re-com/horizontal-pill-tabs
        :tabs tabs
-       :model (or @active-panel :home)
-       :on-change #(routes/goto-page %)])))
+       :model (or @page :home)
+       :on-change #(re-frame/dispatch [:set-page % @server])])))
 
 (defn main-panel []
   (let [schema (re-frame/subscribe [:schema])]
