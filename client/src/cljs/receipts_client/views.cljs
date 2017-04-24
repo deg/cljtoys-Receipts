@@ -287,8 +287,10 @@
 (defn main-panel []
   (let [schema (re-frame/subscribe [:schema])]
     (fn []
-      (when-not @schema
-        (re-frame/dispatch [:get-schema]))
+      ;; [TODO] This gets the schema once when the program starts. This is probably wrong:
+      ;; - I don't know if this is called at the best time or place
+      ;; - No mechanism to get changed schema; especially, e.g., if a client is open for many days
+      (re-frame/dispatch [:get-schema])
       [re-com/v-box
        :height "100%"
        :children [[app-title]

@@ -1,6 +1,7 @@
 (ns receipts-client.events
   (:require  [ajax.core :as ajax]
              [cljs-time.core :as time]
+             [cljs-time.coerce :as time-coerce]
              [day8.re-frame.http-fx]
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
@@ -66,7 +67,7 @@
    {:http-xhrio (api/post-purchase-request
                  (assoc receipt
                         ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
-                        :purchase/date (.toJSON (:purchase/date receipt))
+                        :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))
                         ;; [TODO]  Need better UID
                         :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
                         :purchase/price (js/parseFloat (:purchase/price receipt))
