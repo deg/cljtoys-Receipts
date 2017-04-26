@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-server.server
   (:gen-class) ; for -main method in uberjar
   (:require [io.pedestal.http :as server]

@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-server.service
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]

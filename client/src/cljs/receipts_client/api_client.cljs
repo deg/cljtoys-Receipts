@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-client.api-client
   (:require [ajax.core :as ajax]))
 

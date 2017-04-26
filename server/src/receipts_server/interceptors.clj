@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-server.interceptors
   (:require [clojure.instant :as instant]
             [io.pedestal.interceptor :as i]))

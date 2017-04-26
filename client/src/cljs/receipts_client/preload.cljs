@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-client.preload
   (:require  [ajax.core :as ajax]
              [day8.re-frame.http-fx]

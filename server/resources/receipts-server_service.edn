@@ -190,15 +190,7 @@
                                                                  :purchase/paymentMethod
                                                                  :purchase/date
                                                                  :purchase/comment
-                                                                 :purchase/forWhom]}]}
-
-                "/capture" {:get #vase/respond {:name :example.v1/url-param-example
-                                                :params [date]
-                                                :edn-coerce [date]
-                                                :body (str "You said: " date " which is a " (type date))}}
-
-
-                }
+                                                                 :purchase/forWhom]}]}}
                :vase.api/schemas [:receipts/schema]
                :vase.api/forward-headers ["vaserequest-id"]}}}}
 

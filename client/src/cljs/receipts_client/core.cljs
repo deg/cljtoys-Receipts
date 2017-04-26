@@ -1,3 +1,6 @@
+;;; Author: David Goldfarb (deg@degel.com)
+;;; Copyright (c) 2017, David Goldfarb
+
 (ns receipts-client.core
     (:require [reagent.core :as reagent]
               [re-frame.core :as re-frame]
