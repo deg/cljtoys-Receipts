@@ -52,18 +52,18 @@
                       :params {:currency/name name :currency/abbrev abbrev}
                       :on-success [:process-response]})])
 
-(defn Purchase [server uid price currency category vendor paid-by date comment for-whom]
+(defn Purchase [server uid payment-method date currency price category vendor comment for-whom]
   [(api/post-request {:server server
                       :api "purchase"
                       :params {:purchase/uid uid
-                               :purchase/price price
+                               :purchase/paymentMethod payment-method
+                               :purchase/date date
                                :purchase/currency currency
+                               :purchase/price price
                                :purchase/category category
                                :purchase/vendor vendor
-                               :purchase/paid-by paid-by
-                               :purchase/date date
                                :purchase/comment comment
-                               :purchase/for-whom for-whom}
+                               :purchase/forWhom for-whom}
                       :on-success [:process-response]})])
 
 (defn initial-data [server]
@@ -142,7 +142,7 @@
              ["meches" "Royale Schoenbrun"])
    (Category server "Travel" "Airfare, bus, taxi, and other travel-related"
              ["Bus" "Taxi" "Train"])
-   (Purchase server "D-1001" 12.01 "NIS" "Home" "Ashley Coleman" "v9949" "1985-04-12T23:20:50.52Z" "Test 2" "D")
-   (Purchase server "D-1002" 12.02 "USD" "Travel" "Bus" "Cash" "1990" "Test bus ride" ["D" "Degel"])
-   (Purchase server "D-1003" 12.03 "EU" "Restaurant" "La Chateau Fumanchu" "v5692" "1987-04-12T23:20:50.52Z" "Euro test" "D")
-   (Purchase server "D-1004" 12.04 "GBP" "Home" "Cyrus McDuffey" "mc5331" "1982-04-12T23:15:50.52Z" "Another" "D")))
+   (Purchase server "D-1001" "v9949" "1985-04-12T23:20:50.52Z" "NIS" 12.01 "Home" "Ashley Coleman" "Test 2" "D")
+   (Purchase server "D-1002" "Cash" "1990" "USD" 12.02 "Travel" "Bus" "Test bus ride" ["D" "Degel"])
+   (Purchase server "D-1003" "v5692" "1987-04-12T23:20:50.52Z" "EU" 12.03 "Restaurant" "La Chateau Fumanchu" "Euro test" "D")
+   (Purchase server "D-1004" "mc5331" "1982-04-12T23:15:50.52Z" "GBP" 12.04 "Home" "Cyrus McDuffey" "Another" "D")))

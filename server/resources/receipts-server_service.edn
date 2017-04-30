@@ -159,6 +159,12 @@
                                                 :query [:find [(pull ?e [*]) ...]
                                                         :where [?e :purchase/uid]]}}
 
+                "/csv-history" {:get [#vase/query {:name :receipts-server.v1/csv-history-get
+                                                   :query [:find [(pull ?e [*]) ...]
+                                                           :where [?e :purchase/uid]]
+                                                   :to :csv/raw}
+                                      receipts-server.interceptors/csv-response]}
+
                 "/purchase" {:get #vase/query {:name :receipts-server.v1/purchase-get
                                                :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
                                                         [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]

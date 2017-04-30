@@ -3,13 +3,14 @@
 
 (ns receipts-client.views
   (:require
+   [cljs-time.coerce :as time-coerce]
    [cljs-time.core :as time]
    [cljs-time.format :as time-format]
-   [cljs-time.coerce :as time-coerce]
    [clojure.string :as str]
-   [reagent.core :as reagent]
-   [re-frame.core :as re-frame]
    [re-com.core :as re-com]
+   [re-frame.core :as re-frame]
+   [reagent.core :as reagent]
+   [receipts-client.routes :as routes]
    [struct.core :as struct]))
 
 
@@ -239,14 +240,21 @@
                                     (history-cell id-fn :forWhom forWhom)]))
                 purchases)]])
 
+(defn history-csv [csv]
+  [:textarea {:rows 20 :style {:font-family "Monospace"} :read-only true :value (or csv "")}])
+
 (defn history-panel []
-  (let [history (re-frame/subscribe [:history])]
+  (let [history (re-frame/subscribe [:history])
+        csv (re-frame/subscribe [:history-csv])]
     (fn []
       [re-com/v-box
        :gap "1em"
        :children [(panel-title "History")
-                  (button [:get-history] "Get History" "Load history from server")
-                  [history-table @history]]])))
+                  [history-table @history]
+                  [history-csv @csv]
+                  [re-com/h-box
+                   :justify :center
+                   :children [(button [:get-history] "Refresh History" "Load history from server")]]]])))
 
 (defn setup-panel []
   (let [server (re-frame/subscribe [:server])]
@@ -286,7 +294,7 @@
       [re-com/horizontal-pill-tabs
        :tabs tabs
        :model (or @page :home)
-       :on-change #(re-frame/dispatch [:set-page % @server])])))
+       :on-change #(routes/goto-page % @server)])))
 
 (defn main-panel []
   (let [schema (re-frame/subscribe [:schema])]

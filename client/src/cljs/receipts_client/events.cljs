@@ -82,18 +82,27 @@
    {:http-xhrio [(api/get-request {:server (:server db)
                                    :api "purchases"
                                    :params {}
-                                   :on-success [:got-history]})]}))
+                                   :on-success [:got-history]})
+                 (api/get-request {:server (:server db)
+                                   :api "csv-history"
+                                   :params {}
+                                   :on-success [:got-csv-history]})]}))
+
+(re-frame/reg-event-db
+ :got-history
+ (fn got-history [db [_ pull-response]]
+   (assoc-in db [:history :purchases] (sort-by :purchase/date pull-response))))
+
+(re-frame/reg-event-db
+ :got-csv-history
+ (fn got-cvs-history [db [_ csv]]
+   (assoc-in db [:history :csv] (:csv csv))))
 
 
 (re-frame/reg-event-db
  :got-schema
  (fn got-schema [db [_ section pull-response]]
    (assoc-in db [:schema section] pull-response)))
-
-(re-frame/reg-event-db
- :got-history
- (fn got-history [db [_ pull-response]]
-   (assoc db :history (sort-by :purchase/date pull-response))))
 
 (re-frame/reg-event-db
  :edit-current-receipt

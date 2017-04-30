@@ -23,7 +23,12 @@
 (re-frame/reg-sub
  :history
  (fn [db _]
-   (:history db)))
+   (get-in db [:history :purchases])))
+
+(re-frame/reg-sub
+ :history-csv
+ (fn [db _]
+   (get-in db [:history :csv])))
 
 (re-frame/reg-sub
  :schema

@@ -19,7 +19,10 @@
     {(subs (str k) 1) v}
     {k v}))
 
-(defn- api-request [{:keys [method server api params on-success]}]
+(defn- api-request [{:keys [method server api params response-format timeout on-success on-failure]
+                     :or {response-format (ajax/transit-response-format)
+                          timeout api-timeout
+                          on-failure [:process-failure]}}]
   ;; [TODO] Fixup how we are using Transit and namespaced keywords, to avoid this ugliness
   ;; This is code location #1 for this issue
   (let [params (if (= method :get)
@@ -30,17 +33,15 @@
      :params (if (or (= method :get) (:payload params))
                params
                {:payload [params]})
-     :timeout api-timeout
+     :timeout timeout
      ;; [TODO] Use Transit for Post too. See https://github.com/cognitect-labs/vase/issues/68
      ;; This is code location #2 for this issue
      :format (if (= method :get)
                (ajax/transit-request-format)
                (ajax/json-request-format))
-     :response-format (if false
-                        (ajax/json-response-format {:keywords? true})
-                        (ajax/transit-response-format))
+     :response-format (if (string? response-format) {:content-type response-format} response-format)
      :on-success on-success
-     :on-failure [:process-failure]}))
+     :on-failure on-failure}))
 
 (defn get-request [{:keys [server api params on-success] :as request-params}]
   (api-request (assoc request-params :method :get)))
