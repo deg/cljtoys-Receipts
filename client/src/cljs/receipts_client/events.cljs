@@ -54,19 +54,35 @@
  :get-schema
   (fn get-schema [{db :db} _]
     (let [server (:server db)]
-      {:http-xhrio [(api/get-request server "categories" {} [:got-schema :categories])
-                    (api/get-request server "currencies" {} [:got-schema :currencies])
-                    (api/get-request server "paymentMethods" {} [:got-schema :payment-methods])
-                    (api/get-request server "users" {} [:got-schema :users])
-                    (api/get-request server "vendors" {} [:got-schema :vendors])
-                    ]
-       :db  (assoc db :loading? true)}
-      )))
+      {:http-xhrio [(api/get-request {:server server
+                                      :api "categories"
+                                      :params {}
+                                      :on-success [:got-schema :categories]})
+                    (api/get-request {:server server
+                                      :api "currencies"
+                                      :params {}
+                                      :on-success [:got-schema :currencies]})
+                    (api/get-request {:server server
+                                      :api "paymentMethods"
+                                      :params {}
+                                      :on-success [:got-schema :payment-methods]})
+                    (api/get-request {:server server
+                                      :api "users"
+                                      :params {}
+                                      :on-success [:got-schema :users]})
+                    (api/get-request {:server server
+                                      :api "vendors"
+                                      :params {}
+                                      :on-success [:got-schema :vendors]})]
+       :db  (assoc db :loading? true)})))
 
 (re-frame/reg-event-fx
  :get-history
  (fn get-history [{db :db} _]
-   {:http-xhrio [(api/get-request (:server db) "purchases" {} [:got-history])]}))
+   {:http-xhrio [(api/get-request {:server (:server db)
+                                   :api "purchases"
+                                   :params {}
+                                   :on-success [:got-history]})]}))
 
 
 (re-frame/reg-event-db
@@ -87,16 +103,17 @@
 (re-frame/reg-event-fx
  :submit-receipt
  (fn submit-receipt [{db :db} [_ receipt]]
-   {:http-xhrio (api/post-purchase-request (:server db)
-                 (assoc receipt
-                        ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
-                        :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))
-                        ;; [TODO]  Need better UID
-                        :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
-                        :purchase/price (js/parseFloat (:purchase/price receipt))
-                        ;; [TODO] temp
-                        :purchase/currency "NIS")
-                 [:submitted-receipt]
+   {:http-xhrio (api/post-request {:server (:server db)
+                                   :api "purchase"
+                                   :params (assoc receipt
+                                                  ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
+                                                  :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))
+                                                  ;; [TODO]  Need better UID
+                                                  :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
+                                                  :purchase/price (js/parseFloat (:purchase/price receipt))
+                                                  ;; [TODO] temp
+                                                  :purchase/currency "NIS")
+                                   :on-success [:submitted-receipt]}
                  ;; [TODO] Need to handle server error, and restore previous receipt
                  ;; [TODO] Need to go to page that prevents new data entry until previous processed
                  )

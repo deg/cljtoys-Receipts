@@ -19,7 +19,7 @@
     {(subs (str k) 1) v}
     {k v}))
 
-(defn- api-request [method server api params on-success]
+(defn- api-request [{:keys [method server api params on-success]}]
   ;; [TODO] Fixup how we are using Transit and namespaced keywords, to avoid this ugliness
   ;; This is code location #1 for this issue
   (let [params (if (= method :get)
@@ -27,8 +27,7 @@
                  (into {} (map namespaced->str params)))]
     {:method method
      :uri (str (api-root server) api)
-     :params (if (or (= method :get)
-                     (:payload params))
+     :params (if (or (= method :get) (:payload params))
                params
                {:payload [params]})
      :timeout api-timeout
@@ -43,59 +42,23 @@
      :on-success on-success
      :on-failure [:process-failure]}))
 
-(def get-request (partial api-request :get))
-(def post-request (partial api-request :post))
-(def delete-request (partial api-request :delete))
+(defn get-request [{:keys [server api params on-success] :as request-params}]
+  (api-request (assoc request-params :method :get)))
+(defn post-request  [{:keys [server api params on-success] :as request-params}]
+  (api-request (assoc request-params :method :post)))
+(defn delete-request  [{:keys [server api params on-success] :as request-params}]
+  (api-request (assoc request-params :method :delete)))
 
-;; [TODO] Refactor this repeated code into an engine
 
-(defn get-user-request [server {:user/keys [name abbrev email] :as params} on-success]
-  (get-request server "user" params on-success))
-
-(defn post-user-request [server {:user/keys [name abbrev email sysAdmin? editor? consumer?] :as params} on-success]
-  (post-request server "user" params on-success))
-
-(defn get-vendor-request [server {:vendor/keys [name] :as params} on-success]
-  (get-request server "vendor" params on-success))
-
-(defn post-vendor-request [server {:vendor/keys [name description category] :as params} on-success]
-  (post-request server "vendor" params on-success))
-
+;;; [TODO] Can this be cleaned up and/or generalized?
 (defn post-vendors-request [server vendors on-success]
   ;; [TODO] Barf! Try to use Transit, instead of JSON to clean up this sty
   ;; This is code location #3 for this issue
-  (post-request server "vendor" {:payload
-                                 (mapv (fn [vendor]
-                                         (into {} (map namespaced->str vendor)))
-                                       vendors)}
-                on-success))
+  (post-request {:server server
+                 :api "vendor"
+                 :params {:payload
+                          (mapv (fn [vendor]
+                                  (into {} (map namespaced->str vendor)))
+                                vendors)}
+                 :on-success on-success}))
 
-(defn get-category-request [server {:category/keys [name] :as params} on-success]
-  (get-request server "category" params on-success))
-
-(defn post-category-request [server {:category/keys [name description] :as params} on-success]
-  (post-request server "category" params on-success))
-
-(defn get-payment-method-request [server {:paymentMethod/keys [name abbrev] :as params} on-success]
-  (get-request server "paymentMethod" params on-success))
-
-(defn post-payment-method-request [server {:paymentMethod/keys [name abbrev] :as params} on-success]
-  (post-request server "paymentMethod" params on-success))
-
-(defn get-currency-request [server {:currency/keys [name abbrev] :as params} on-success]
-  (get-request server "currency" params on-success))
-
-(defn post-currency-request [server {:currency/keys [name abbrev] :as params} on-success]
-  (post-request server "currency" params on-success))
-
-(defn get-purchase-request [server
-                            {:purchase/keys
-                             [uid price currency category vendor paid-by date comment for-whom] :as params}
-                            on-success]
-  (get-request server "purchase" params on-success))
-
-(defn post-purchase-request [server
-                             {:purchase/keys
-                              [uid price currency category vendor paid-by date comment for-whom] :as params}
-                             on-success]
-  (post-request server "purchase" params on-success))

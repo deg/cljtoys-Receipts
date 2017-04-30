@@ -15,41 +15,56 @@
   (into m (remove (comp nil? val) kvs)))
 
 (defn User [server name abbrev email sysAdmin? editor? consumer?]
-  [(api/post-user-request server
-    (assoc-if {}
-      {:user/name name :user/abbrev abbrev :user/email email
-       :user/sysAdmin? sysAdmin? :user/editor? editor? :user/consumer? consumer?})
-    [:process-response])])
+  [(api/post-request {:server server
+                      :api "user"
+                      :params (assoc-if {}
+                                {:user/name name :user/abbrev abbrev :user/email email
+                                 :user/sysAdmin? sysAdmin? :user/editor? editor? :user/consumer? consumer?})
+                      :on-success [:process-response]})])
 
 (defn- simple-vendor [name category]
   {:vendor/name name :description "" :vendor/category category})
 
 (defn Vendor [server category name]
-  [(api/post-vendor-request server (simple-vendor name category) [:process-response])])
+  [(api/post-request {:server server
+                      :api "vendor"
+                      :params (simple-vendor name category)
+                      :on-success [:process-response]})])
 
 (defn Category [server category-name description vendor-names]
   (vector
-   (api/post-category-request server {:category/name category-name :category/description description} [:process-response])
+   (api/post-request {:server server
+                      :api "category"
+                      :params {:category/name category-name :category/description description}
+                      :on-success [:process-response]})
    (let [vendor-requests (mapv #(simple-vendor % category-name) vendor-names)]
      (api/post-vendors-request server vendor-requests [:process-response]))))
 
 (defn Payment-method [server name abbrev]
-  [(api/post-payment-method-request server {:paymentMethod/name name :paymentMethod/abbrev abbrev} [:process-response])])
+  [(api/post-request {:server server
+                      :api "paymentMethod"
+                      :params {:paymentMethod/name name :paymentMethod/abbrev abbrev}
+                      :on-success [:process-response]})])
 
 (defn Currency [server name abbrev]
-  [(api/post-currency-request server {:currency/name name :currency/abbrev abbrev} [:process-response])])
+  [(api/post-request {:server server
+                      :api "currency"
+                      :params {:currency/name name :currency/abbrev abbrev}
+                      :on-success [:process-response]})])
 
 (defn Purchase [server uid price currency category vendor paid-by date comment for-whom]
-  [(api/post-purchase-request server {:purchase/uid uid
-                                      :purchase/price price
-                                      :purchase/currency currency
-                                      :purchase/category category
-                                      :purchase/vendor vendor
-                                      :purchase/paid-by paid-by
-                                      :purchase/date date
-                                      :purchase/comment comment
-                                      :purchase/for-whom for-whom}
-                              [:process-response])])
+  [(api/post-request {:server server
+                      :api "purchase"
+                      :params {:purchase/uid uid
+                               :purchase/price price
+                               :purchase/currency currency
+                               :purchase/category category
+                               :purchase/vendor vendor
+                               :purchase/paid-by paid-by
+                               :purchase/date date
+                               :purchase/comment comment
+                               :purchase/for-whom for-whom}
+                      :on-success [:process-response]})])
 
 (defn initial-data [server]
   (concat
