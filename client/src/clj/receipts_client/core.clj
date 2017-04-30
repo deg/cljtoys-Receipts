@@ -1,0 +1,1 @@
+(ns receipts-client.core)
