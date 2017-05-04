@@ -3,10 +3,12 @@
 
 (ns receipts-server.server
   (:gen-class) ; for -main method in uberjar
-  (:require [io.pedestal.http :as server]
-            [io.pedestal.http.route :as route]
-            [com.cognitect.vase :as vase]
-            [receipts-server.service :as service]))
+  (:require
+   [com.cognitect.vase :as vase]
+   [io.pedestal.http :as server]
+   [io.pedestal.http.route :as route]
+   [io.pedestal.log :as log]
+   [receipts-server.service :as service]))
 
 (defn activate-vase
   ([base-routes api-root spec-paths]
@@ -92,3 +94,10 @@
 ;;  (server/servlet-destroy @servlet)
 ;;  (reset! servlet nil))
 
+
+(defn reload []
+  (require 'receipts-server.render :reload-all)
+  (require 'receipts-server.interceptors :reload-all)
+  (require 'receipts-server.service :reload-all)
+  (require 'receipts-server.server :reload-all)
+  (log/info :msg "Server environment reloaded"))

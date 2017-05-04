@@ -5,4 +5,4 @@ ADD target/receipts-server-0.0.1-SNAPSHOT-standalone.jar /receipts-server/app.ja
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "/receipts-server/app.jar"]
+CMD ["java", "-Xmx500m", "-jar", "/receipts-server/app.jar"]

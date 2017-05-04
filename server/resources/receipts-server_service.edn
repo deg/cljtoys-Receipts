@@ -1,5 +1,9 @@
 {:activated-apis [:receipts-server/v1]
+
+ ;; When we move to persistent Dataomic, replace next line with this:
+ ;; :datomic-uri "datomic:dev://localhost:4334/receipts"
  :datomic-uri "datomic:mem://example"
+
  :descriptor
  ;; Datomic Schema Norms
  ;; --------------------

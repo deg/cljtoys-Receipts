@@ -13,8 +13,8 @@
 
 
 (defn dev-setup []
+  (enable-console-print!)
   (when config/debug?
-    (enable-console-print!)
     (enable-re-frisk!)
     (println "dev mode")))
 

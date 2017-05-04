@@ -259,14 +259,18 @@
 (defn setup-panel []
   (let [server (re-frame/subscribe [:server])]
     (fn []
-      (let [this-server  (case @server :production "production" :development "development" "???")
-            other-server (case @server :production "development" :development "production" "???")]
-        [re-com/v-box
-         :gap "1em"
-         :children [(panel-title "Setup")
-                    (button [:preload-base] "Preload database" "Install initial DB (you should not need this)")
-                    (button [:toggle-server] (str "Toggle server (now " this-server ")")
-                            (str "Switch to " other-server " server"))]]))))
+      [re-com/v-box
+       :gap "1em"
+       :children [(panel-title "Setup")
+                  (button [:preload-base] "Preload database" "Install initial DB (you should not need this)")
+                  [re-com/h-box
+                   :gap "1em"
+                   :children [[re-com/label :label "Server:"]
+                              [re-com/single-dropdown :choices [{:id :production :label "production"}
+                                                                {:id :development :label "development"}]
+                               :width "11em"
+                               :model @server
+                               :on-change #(re-frame/dispatch [:set-server %])]]]]])))
 
 (defn wrap-page [page]
   [re-com/border
@@ -275,10 +279,10 @@
    :padding "6px"
    :child page])
 
-(def tabs [{:id :home    :label "home"    :panel (wrap-page [home-panel])}
-           {:id :history :label "history" :panel (wrap-page [history-panel])}
-           {:id :setup   :label "setup"   :panel (wrap-page [setup-panel])}
-           {:id :about   :label "about"   :panel (wrap-page [about-panel])}])
+(def tabs [{:id :home    :label "home"      :panel (wrap-page [home-panel])}
+           {:id :history :label "history"   :panel (wrap-page [history-panel])}
+           {:id :about   :label "about"     :panel (wrap-page [about-panel])}
+           {:id :setup   :label "dev setup" :panel (wrap-page [setup-panel])}])
 
 (defn tab-panel []
   (let [page (re-frame/subscribe [:page])]

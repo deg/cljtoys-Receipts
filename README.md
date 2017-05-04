@@ -30,17 +30,25 @@ TBD
 
 # Building
 
-TBD
+## Development server
 
-## Building server
+### Building server
 
-TBD
+- cd server
+- lein repl
+- in repl: ``
 
-## Building client
+### Building client
 
-TBD
+- Open one of the .cljs files in Emacs, and give the usual C-M-Sh-J salute
+- Browse to localhost:3449
 
-## Development vs Production site
+## Production server
+
+The production build is driven by scripts in my [lightsail-config](https://github.com/deg/lightsail-config) project.
+
+The remote_build.sh script in that project will rebuild this project and upload it to the server
+
 
 # Contributing
 
@@ -50,11 +58,11 @@ I'll get back to you.
 
 # License
 
-Copyright (c) 2017, David Goldfarb
+Licensed under the Eclipse Public License.
 
+Copyright (c) 2017, David Goldfarb
 Portions based on earlier versions of this application, also written by me, copyright 2013-2016
 
-Licensed under the Eclipse Public License.
 
 
 

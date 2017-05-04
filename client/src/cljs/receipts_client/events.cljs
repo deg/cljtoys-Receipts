@@ -35,13 +35,10 @@
            {}))))
 
 (re-frame/reg-event-fx
- :toggle-server
- (fn toggle-server [{db :db} _]
-   (let [server (case (:server db)
-                  :production :development
-                  :development :production
-                  :production)]
-     {:dispatch [:set-page (:page db) server]})))
+ :set-server
+ (fn set-server [{db :db} [_ server]]
+   {:dispatch [:set-page (:page db) server]
+    :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]}))
 
 
 (re-frame/reg-event-fx
@@ -146,6 +143,7 @@
 
 (re-frame/reg-event-db
  :process-failure
- (fn process-failure [db & result]
-   (prn "Got failure: " result)
+ (fn process-failure [db & [[_ {:keys [uri last-method status status-text] :as details}]]]
+   (prn "Network connection failure: " details)
+   (js/alert (goog.string/format "Error %d - %s\nIn %s %s\n\n%s" status status-text last-method uri details))
    db))

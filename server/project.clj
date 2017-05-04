@@ -1,11 +1,15 @@
 (defproject receipts-server "0.0.1-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "Simple receipts server"
+  :url "http://degel.com"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
-                 [io.pedestal/pedestal.service "0.5.2"]
-                 [com.cognitect/pedestal.vase "0.9.1-SNAPSHOT"]
+                 [io.pedestal/pedestal.service "0.5.2" :exclusions [cheshire]]
+                 [com.datomic/datomic-pro "0.9.5561" :exclusions [com.fasterxml.jackson.core/jackson-core
+                                                                  com.fasterxml.jackson.core/jackson-databind
+                                                                  joda-time
+                                                                  org.slf4j/slf4j-nop]]
+                 [com.cognitect/pedestal.vase "0.9.2-SNAPSHOT" :exclusions [com.datomic/datomic-free]]
 
                  ;; Remove this line and uncomment one of the next lines to
                  ;; use Immutant or Tomcat instead of Jetty:
@@ -19,7 +23,7 @@
                  [org.slf4j/log4j-over-slf4j "1.7.22"]
 
                  [clj-time "0.13.0"]
-                 [clojure-csv/clojure-csv "2.0.1"]]
+                 [clojure-csv/clojure-csv "2.0.2"]]
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
   ;; If you use HTTP/2 or ALPN, use the java-agent to pull in the correct alpn-boot dependency
