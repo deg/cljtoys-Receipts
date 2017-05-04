@@ -7,7 +7,8 @@
             [io.pedestal.http.body-params :as body-params]
             [ring.util.response :as ring-resp]
             [com.cognitect.vase :as vase]
-            [receipts-server.interceptors]))
+            [receipts-server.interceptors]
+            [receipts-server.render]))
 
 (defn about-page
   [request]

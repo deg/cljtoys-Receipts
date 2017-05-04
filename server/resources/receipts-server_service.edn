@@ -159,11 +159,16 @@
                                                 :query [:find [(pull ?e [*]) ...]
                                                         :where [?e :purchase/uid]]}}
 
-                "/csv-history" {:get [#vase/query {:name :receipts-server.v1/csv-history-get
-                                                   :query [:find [(pull ?e [*]) ...]
-                                                           :where [?e :purchase/uid]]
-                                                   :to :csv/raw}
-                                      receipts-server.interceptors/csv-response]}
+                "/csv-history" {:get [#vase/intercept
+                                      {:name :receipts-server.v1/cvs-history-get-intercept
+                                       :leave (fn [context]
+                                                (update-in context [:response :body]
+                                                           (fn [body]
+                                                             {:csv (receipts-server.render/csv-purchases body)})))}
+                                      #vase/query
+                                      {:name :receipts-server.v1/csv-history-get
+                                       :query [:find [(pull ?e [*]) ...]
+                                               :where [?e :purchase/uid]]}]}
 
                 "/purchase" {:get #vase/query {:name :receipts-server.v1/purchase-get
                                                :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
@@ -184,8 +189,16 @@
                                                                 [?e :purchase/date ?date]
                                                                 [?e :purchase/comment ?comment]
                                                                 [?e :purchase/forWhom ?forWhom])]}
-                             :post [receipts-server.interceptors/date-conversion
-                                    receipts-server.interceptors/float-conversion
+                             :post [#vase/intercept
+                                    {:name :receipts-server.v1/purchase-post-intercept1
+                                     :enter (fn [context]
+                                              (update-in context [:request :json-params :payload]
+                                                         (receipts-server.interceptors/date-updater :purchase/date)))}
+                                    #vase/intercept
+                                    {:name :receipts-server.v1/purchase-post-intercept2
+                                     :enter (fn [context]
+                                              (update-in context [:request :json-params :payload]
+                                                         (receipts-server.interceptors/float-updater :purchase/price)))}
                                     #vase/transact {:name :receipts-server.v1/purchase-create
                                                     :properties [:db/id
                                                                  :purchase/uid
@@ -199,4 +212,3 @@
                                                                  :purchase/forWhom]}]}}
                :vase.api/schemas [:receipts/schema]
                :vase.api/forward-headers ["vaserequest-id"]}}}}
-
