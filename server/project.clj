@@ -32,4 +32,3 @@
                    :dependencies [[io.pedestal/pedestal.service-tools "0.5.2"]]}
              :uberjar {:aot [receipts-server.server]}}
   :main ^{:skip-aot true} receipts-server.server)
-

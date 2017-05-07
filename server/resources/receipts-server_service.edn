@@ -163,6 +163,19 @@
                                                 :query [:find [(pull ?e [*]) ...]
                                                         :where [?e :purchase/uid]]}}
 
+                "/about" {:get [#vase/intercept
+                                {:name :receipts-server.v1/about-get-intercept
+                                 :leave (fn [context]
+                                          (update-in context [:response :body]
+                                                     (fn [[count]]
+                                                       {:version (receipts-server.interceptors/project-version)
+                                                        :dependencies(receipts-server.interceptors/dependency-versions)
+                                                        :purchases-count count})))}
+                                #vase/query
+                                {:name :receipts-server.v1/about-get
+                                 :query [:find [(count ?purchases) ...]
+                                         :where [?purchases :purchase/uid]]}]}
+
                 "/csv-history" {:get [#vase/intercept
                                       {:name :receipts-server.v1/cvs-history-get-intercept
                                        :leave (fn [context]

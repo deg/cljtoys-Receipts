@@ -23,3 +23,19 @@
 (defn float-updater [field]
   (partial update-field float field))
 
+(defn project-version []
+  (-> (clojure.java.io/resource "project.clj")
+      slurp
+      read-string
+      (nth 2)))
+
+(defn dependency-versions []
+  (->> (clojure.java.io/resource "project.clj")
+       slurp
+       read-string
+       (drop 3)
+       (partition 2)
+       (map vec)
+       (into {})
+       :dependencies
+       (map (partial take 2))))

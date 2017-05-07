@@ -21,6 +21,11 @@
    (:server db)))
 
 (re-frame/reg-sub
+ :about-server
+ (fn [db _]
+   (get-in db [:about :server])))
+
+(re-frame/reg-sub
  :history
  (fn [db _]
    (get-in db [:history :purchases])))

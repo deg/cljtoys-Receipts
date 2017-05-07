@@ -196,9 +196,25 @@
               [receipt-page]]])
 
 (defn about-panel []
-  [re-com/v-box
-   :gap "1em"
-   :children [(panel-title "About")]])
+  (let [about-server (re-frame/subscribe [:about-server])]
+    (fn []
+      [re-com/v-box
+       :gap "1em"
+       :children [(panel-title "About")
+                  [:div
+                   [:p "Third iteration of a simple receipts management program."]
+                   [:p "This time, my focus is on learning Vase, Datomic, and Pedestal."]
+                   [:h4 "Status"]
+                   [:p (goog.string/format "Currently holding %d purchases." (:purchases-count @about-server))]
+                   [:h4 (goog.string/format "Version %s" (:version @about-server))]
+                   [:h5 "Includes libraries:"]
+                   [:small
+                    [:ul
+                     (map (fn [[dependency version]]
+                            ^{:key dependency}[:li (goog.string/format "%s:%s" dependency version)])
+                          (sort-by first (:dependencies @about-server)))]]
+                   [:p [:em "Copyright (c) 2017, David Goldfarb <deg@degel.com>.
+                             Portions copyright 2013-2016."]]]]])))
 
 (def date-format (time-format/formatter "ddMMMyy"))
 (def time-format (time-format/formatter "HH:mm:ss"))

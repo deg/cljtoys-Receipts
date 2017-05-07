@@ -32,6 +32,7 @@
          (case page
            :history {:dispatch [:get-history]}
            :home {:dispatch [:submitted-receipt]}
+           :about {:dispatch [:get-about-server]}
            {}))))
 
 (re-frame/reg-event-fx
@@ -94,6 +95,19 @@
  :got-csv-history
  (fn got-cvs-history [db [_ csv]]
    (assoc-in db [:history :csv] (:csv csv))))
+
+(re-frame/reg-event-fx
+ :get-about-server
+ (fn get-about-server [{db :db} _]
+   {:http-xhrio [(api/get-request {:server (:server db)
+                                   :api "about"
+                                   :params {}
+                                   :on-success [:got-about-server]})]}))
+
+(re-frame/reg-event-db
+ :got-about-server
+ (fn got-about-server [db [_ about-data]]
+   (assoc-in db [:about :server] about-data)))
 
 
 (re-frame/reg-event-db
