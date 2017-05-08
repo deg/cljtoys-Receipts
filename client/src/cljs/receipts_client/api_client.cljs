@@ -13,11 +13,21 @@
     nil))
 (def api-timeout 5000)
 
+;;; [TODO] Belongs in forthcoming utils library. Cribbed from photovu/src/cljc
+(defn assoc-if
+  "Like assoc, but takes pairs as a map, and only assocs non-nil values"
+  [m kvs]
+  (into m (remove (comp nil? val) kvs)))
+
+;;; [TODO] Barf! Try to use Transit, instead of JSON to clean up this sty
 (defn namespaced->str [[k v]]
-  (if (and (keyword? k)
-           (not (empty? (namespace k))))
-    {(subs (str k) 1) v}
-    {k v}))
+  {(if (and (keyword? k) (not (empty? (namespace k))))
+     (subs (str k) 1)
+     k)
+   v})
+
+(defn string-keyed [mapp]
+  (into {} (map namespaced->str mapp)))
 
 (defn- api-request [{:keys [method server api params response-format timeout on-success on-failure]
                      :or {response-format (ajax/transit-response-format)
@@ -27,7 +37,7 @@
   ;; This is code location #1 for this issue
   (let [params (if (= method :get)
                  params
-                 (into {} (map namespaced->str params)))]
+                 (string-keyed params))]
     {:method method
      :uri (str (api-root server) api)
      :params (if (or (= method :get) (:payload params))
@@ -50,16 +60,4 @@
 (defn delete-request  [{:keys [server api params on-success] :as request-params}]
   (api-request (assoc request-params :method :delete)))
 
-
-;;; [TODO] Can this be cleaned up and/or generalized?
-(defn post-vendors-request [server vendors on-success]
-  ;; [TODO] Barf! Try to use Transit, instead of JSON to clean up this sty
-  ;; This is code location #3 for this issue
-  (post-request {:server server
-                 :api "vendor"
-                 :params {:payload
-                          (mapv (fn [vendor]
-                                  (into {} (map namespaced->str vendor)))
-                                vendors)}
-                 :on-success on-success}))
 

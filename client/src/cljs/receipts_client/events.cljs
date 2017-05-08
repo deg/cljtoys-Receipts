@@ -50,29 +50,43 @@
 
 (re-frame/reg-event-fx
  :get-schema
-  (fn get-schema [{db :db} _]
+  (fn get-schema [{db :db} [_ api]]
     (let [server (:server db)]
-      {:http-xhrio [(api/get-request {:server server
-                                      :api "categories"
-                                      :params {}
-                                      :on-success [:got-schema :categories]})
-                    (api/get-request {:server server
-                                      :api "currencies"
-                                      :params {}
-                                      :on-success [:got-schema :currencies]})
-                    (api/get-request {:server server
-                                      :api "paymentMethods"
-                                      :params {}
-                                      :on-success [:got-schema :payment-methods]})
-                    (api/get-request {:server server
-                                      :api "users"
-                                      :params {}
-                                      :on-success [:got-schema :users]})
-                    (api/get-request {:server server
-                                      :api "vendors"
-                                      :params {}
-                                      :on-success [:got-schema :vendors]})]
+      {:http-xhrio (remove nil?
+                           [(when (#{:all "category"} api)
+                              (api/get-request {:server server
+                                                :api "categories"
+                                                :params {}
+                                                :on-success [:got-schema :categories]}))
+                            (when (#{:all "currency"} api)
+                              (api/get-request {:server server
+                                                :api "currencies"
+                                                :params {}
+                                                :on-success [:got-schema :currencies]}))
+
+                            (when (#{:all "paymentMethod"} api)
+                              (api/get-request {:server server
+                                                :api "paymentMethods"
+                                                :params {}
+                                                :on-success [:got-schema :payment-methods]}))
+                            (when (#{:all "user"} api)
+                              (api/get-request {:server server
+                                                :api "users"
+                                                :params {}
+                                                :on-success [:got-schema :users]}))
+                            (when (#{:all "vendor"} api)
+                              (api/get-request {:server server
+                                                :api "vendors"
+                                                :params {}
+                                                :on-success [:got-schema :vendors]}))])
        :db  (assoc db :loading? true)})))
+
+(re-frame/reg-event-db
+ :got-schema
+ (fn got-schema [db [_ section pull-response]]
+   (assoc-in db [:schema section] pull-response)))
+
+
 
 (re-frame/reg-event-fx
  :get-history
@@ -111,11 +125,6 @@
 
 
 (re-frame/reg-event-db
- :got-schema
- (fn got-schema [db [_ section pull-response]]
-   (assoc-in db [:schema section] pull-response)))
-
-(re-frame/reg-event-db
  :edit-current-receipt
  (fn edit-current-receipt [db [_ field value]]
    (assoc-in db [:current-receipt field] value)))
@@ -149,11 +158,6 @@
  :submitted-receipt
  (fn submitted-receipt [db [_ response]]
    (update db :current-receipt reset-receipt)))
-
-(re-frame/reg-event-db
- :process-response
- (fn process-response [db [_ response]]
-   (assoc-in db [:dbg :last-response] response)))
 
 (re-frame/reg-event-db
  :process-failure
