@@ -11,6 +11,7 @@
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
    [receipts-client.routes :as routes]
+   [receipts-client.utils :as utils]
    [struct.core :as struct]))
 
 
@@ -25,7 +26,16 @@
        :level :level1])))
 
 (defn panel-title [label]
+  [re-com/title :label label :level :level1])
+
+(defn panel-subtitle [label]
   [re-com/title :label label :level :level2])
+
+(defn section-title [label]
+  [re-com/title :label label :level :level3])
+
+(defn subsection-title [label]
+  [re-com/title :label label :level :level4])
 
 (defn button [dispatch label tooltip]
   [re-com/button
@@ -195,6 +205,65 @@
    :children [(panel-title "New Receipt")
               [receipt-page]]])
 
+(defn add-payment-method []
+  [:div "NYI (payment methods)"])
+
+(defn add-category  []
+  [:div "NYI (categories)"])
+
+(defn add-vendor []
+  (let [categories (re-frame/subscribe [:categories])
+        category (reagent/atom (-> @categories first :db/id))
+        vendor (reagent/atom "")]
+    (fn []
+      [re-com/v-box
+       :gap "0.5rem"
+       :children [[labelled "Category" nil
+                   [re-com/single-dropdown
+                    :width "12rem"
+                    :choices @categories
+                    :id-fn :db/id
+                    :label-fn :category/name
+                    :model category
+                    :on-change #(reset! category %)]]
+                  [labelled "Vendor" nil
+                   [re-com/input-text
+                    :model vendor
+                    :on-change #(reset! vendor %)
+                    :width "12rem"]]
+                  [button [:add-vendor @category @vendor] "Add Vendor" "Create a new vendor"]]])))
+
+(defn edit-panel []
+  (let [actions [{:id :add :label "Add"}
+                 {:id :edit :label "Edit"}]
+        entities [{:id :payment-method :label "Payment Method"}
+                  {:id :category :label "Category"}
+                  {:id :vendor :label "vendor"}]
+        action (reagent/atom :add)
+        entity (reagent/atom :vendor)]
+    (fn []
+      [re-com/v-box
+       :gap "1rem"
+       :children [[panel-title "Schema Editor"]
+                  [labelled "Schema change" nil
+                   [re-com/h-box
+                    :gap "0.5rem"
+                    :children [[re-com/single-dropdown :width  "5rem"
+                                :choices actions :model action
+                                :on-change #(reset! action %)]
+                               [re-com/single-dropdown :width "11rem"
+                                :choices entities :model entity
+                                :on-change #(reset! entity %)]]]]
+                  [panel-subtitle (str (utils/get-at actions :id @action :label) " "
+                                       (utils/get-at entities :id @entity :label))]
+                  (case @action
+                    :add (case @entity
+                           :payment-method [add-payment-method]
+                           :category [add-category]
+                           :vendor [add-vendor]
+                           [:div "ERROR??"])
+                    :edit [:div "NYI"])]])))
+
 (defn about-panel []
   (let [about-server (re-frame/subscribe [:about-server])]
     (fn []
@@ -257,7 +326,13 @@
                 purchases)]])
 
 (defn history-csv [csv]
-  [:textarea {:rows 20 :style {:font-family "Monospace"} :read-only true :value (or csv "")}])
+  [re-com/input-textarea
+   :model (or csv "")
+   :on-change #()
+   :rows 20
+   :width "100%"
+   :style {:font-family "Monospace"}
+   :disabled? true])
 
 (defn history-panel []
   (let [history (re-frame/subscribe [:history])
@@ -272,21 +347,50 @@
                    :justify :center
                    :children [(button [:get-history] "Refresh History" "Load history from server")]]]])))
 
+(defn formatted-schema [title schema-part only-dynamic?]
+  [re-com/v-box
+   :children [[subsection-title title]
+              [:ul (map (fn [tuple]
+                        ^{:key (:db/id tuple)}
+                          [:li {:style {:list-style "none"}}
+                           (str (dissoc tuple :db/id :receipts/dynamic?))])
+                        (if only-dynamic?
+                          (filter :receipts/dynamic? schema-part)
+                          schema-part))]]])
+
 (defn setup-panel []
-  (let [server (re-frame/subscribe [:server])]
+  (let [server (re-frame/subscribe [:server])
+        schema (re-frame/subscribe [:schema])
+        verbose? (reagent/atom false)]
     (fn []
       [re-com/v-box
        :gap "1em"
        :children [(panel-title "Setup")
-                  (button [:preload-base] "Preload database" "Install initial DB (you should not need this)")
+                  (section-title "Developer tools")
                   [re-com/h-box
                    :gap "1em"
-                   :children [[re-com/label :label "Server:"]
-                              [re-com/single-dropdown :choices [{:id :production :label "production"}
-                                                                {:id :development :label "development"}]
-                               :width "11em"
-                               :model @server
-                               :on-change #(re-frame/dispatch [:set-server %])]]]]])))
+                   :children [[re-com/v-box
+                               :children [[re-com/label :label "Server cold init:"]
+                                          (button [:preload-base]
+                                                  "Preload database"
+                                                  "Install initial DB (you should not need this)")]]
+                              [re-com/v-box
+                               :children [[re-com/label :label "Choose server:"]
+                                          [re-com/single-dropdown :choices [{:id :production :label "production"}
+                                                                            {:id :development :label "development"}]
+                                           :width "11em"
+                                           :model @server
+                                           :on-change #(re-frame/dispatch [:set-server %])]]]]]
+                  (section-title "Schema")
+                  (re-com/checkbox
+                   :model verbose?
+                   :on-change #(reset! verbose? %)
+                   :label "Show all?")
+                  (formatted-schema "Users" (:users @schema) (not @verbose?))
+                  (formatted-schema "Payment Methods" (:payment-methods @schema) (not @verbose?))
+                  (formatted-schema "Currencies" (:currencies @schema) (not @verbose?))
+                  (formatted-schema "Categories" (:categories @schema) (not @verbose?))
+                  (formatted-schema "Vendors" (:vendors @schema) (not @verbose?))]])))
 
 (defn wrap-page [page]
   [re-com/border
@@ -295,7 +399,8 @@
    :padding "6px"
    :child page])
 
-(def tabs [{:id :home    :label "home"      :panel (wrap-page [home-panel])}
+(def tabs [{:id :home    :label "receipt"   :panel (wrap-page [home-panel])}
+           {:id :edit    :label "edit"      :panel (wrap-page [edit-panel])}
            {:id :history :label "history"   :panel (wrap-page [history-panel])}
            {:id :about   :label "about"     :panel (wrap-page [about-panel])}
            {:id :setup   :label "dev setup" :panel (wrap-page [setup-panel])}])
@@ -327,5 +432,4 @@
        :height "100%"
        :children [[app-title]
                   [tabs-row]
-                  [tab-panel]]])) )
-
+                  [tab-panel]]])))

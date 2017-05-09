@@ -10,7 +10,8 @@
              [receipts-client.api-client :as api]
              [receipts-client.db :as db]
              [receipts-client.preload :as preload]
-             [receipts-client.routes :as routes]))
+             [receipts-client.routes :as routes]
+             [receipts-client.utils :as utils]))
 
 (re-frame/reg-fx
  :goto-page
@@ -158,6 +159,18 @@
  :submitted-receipt
  (fn submitted-receipt [db [_ response]]
    (update db :current-receipt reset-receipt)))
+
+(re-frame/reg-event-fx
+ :add-vendor
+ (fn add-vendor [{db :db} [_ category-id vendor]]
+   (let [categories (get-in db [:schema :categories])
+         category (utils/get-at categories :db/id category-id :category/name)]
+     {:http-xhrio (api/post-request {:server (:server db)
+                                     :api "vendor"
+                                     :params {"receipts/dynamic?" true
+                                              "vendor/name" vendor
+                                              "vendor/category" category}
+                                     :on-success [:get-schema "vendor"]})})))
 
 (re-frame/reg-event-db
  :process-failure

@@ -36,6 +36,9 @@
   (defroute "/home" [query-params]
     (page-dispatch :home (qp-server query-params)))
 
+  (defroute "/edit" [query-params]
+    (page-dispatch :edit (qp-server query-params)))
+
   (defroute "/history" [query-params]
     (page-dispatch :history (qp-server query-params)))
 
