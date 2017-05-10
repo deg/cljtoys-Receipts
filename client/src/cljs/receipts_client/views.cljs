@@ -47,10 +47,10 @@
   (fn [label error component]
     [re-com/h-box
      :width "100%"
-     :gap "1em"
+     :gap "1rem"
      :children [[re-com/label
                  :class (if error "errmsg" "")
-                 :width "8em "
+                 :width "8rem"
                  :label (str label (if (str/blank? label) "" ": "))]
                 [re-com/v-box :children [component
                                          (when error
@@ -76,7 +76,7 @@
         date-atom (reagent/atom date)
         time-atom (reagent/atom time)]
     [re-com/h-box
-     :gap "0.5rem"
+     :gap "0.2rem"
      :align :center
      :children [(when show-multi-year?
                   [re-com/button
@@ -85,6 +85,7 @@
                    :on-click #(do (swap! date-atom time/minus (time/years 5))
                                   (on-change (update-date-time model @date-atom nil)))])
                 [re-com/datepicker-dropdown
+                 :show-today? true
                  :model date-atom
                  :on-change #(do (reset! date-atom %)
                                  (on-change (update-date-time model % nil)))]
@@ -113,7 +114,7 @@
   (let [current-receipt (re-frame/subscribe [:current-receipt])
         schema (re-frame/subscribe [subs-key])]
     [(if multiple? re-com/selection-list re-com/single-dropdown)
-     :width "15em"
+     :width "15rem"
      :model ((if multiple? (partial into #{}) identity)
              (field-key @current-receipt))
      :choices (sort-by :label (mapv (fn [{id schema-id-key
@@ -130,7 +131,7 @@
   {:purchase/paymentMethod [[struct/required :message "'Paid by' missing"] struct/string]
    :purchase/date [[struct/required :message "Please specify date"] struct/positive]
    :purchase/category [[struct/required :message  "Category missing"] struct/string]
-   :purchase/vendor [[struct/required :message  "Choose vendor after specifying category"] struct/string]
+   :purchase/vendor [[struct/required :message  "Choose vendor in category"] struct/string]
    :purchase/forWhom [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
 
 (defn validate-receipt [receipt]
@@ -144,7 +145,7 @@
     (fn []
       (let [validation-errors (first (validate-receipt @current-receipt))]
         [re-com/v-box
-         :gap "3px"
+         :gap "0.2rem"
          :children
          [[labelled "Paid by"
            (:purchase/paymentMethod validation-errors)
@@ -160,6 +161,7 @@
           [labelled "Price"
            (:purchase/price validation-errors)
            [re-com/input-text
+            :width "15rem"
             :model (or (:purchase/price @current-receipt) "0.00")
             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
             :attr {:type "number"
@@ -180,6 +182,7 @@
           [labelled "Comment"
            (:purchase/comment validation-errors)
            [re-com/input-text
+            :width "15rem"
             :model (or (:purchase/comment @current-receipt) "")
             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
             :attr {:type "text"}]]
@@ -190,9 +193,8 @@
             :subs-key :users
             :schema-label-key :user/name
             :schema-id-key :user/abbrev]]
-          [re-com/gap :size "8px"]
+          [re-com/gap :size "0.5rem"]
           [re-com/h-box
-           :justify :center
            :children
            [[re-com/button
              :disabled? (not (valid-receipt? @current-receipt))
@@ -201,7 +203,7 @@
 
 (defn home-panel []
   [re-com/v-box
-   :gap "1em"
+   :gap "1rem"
    :children [(panel-title "New Receipt")
               [receipt-page]]])
 
@@ -268,7 +270,7 @@
   (let [about-server (re-frame/subscribe [:about-server])]
     (fn []
       [re-com/v-box
-       :gap "1em"
+       :gap "1rem"
        :children [(panel-title "About")
                   [:div
                    [:p "Third iteration of a simple receipts management program."]
@@ -339,12 +341,11 @@
         csv (re-frame/subscribe [:history-csv])]
     (fn []
       [re-com/v-box
-       :gap "1em"
+       :gap "1rem"
        :children [(panel-title "History")
                   [history-table @history]
                   [history-csv @csv]
                   [re-com/h-box
-                   :justify :center
                    :children [(button [:get-history] "Refresh History" "Load history from server")]]]])))
 
 (defn formatted-schema [title schema-part only-dynamic?]
@@ -364,11 +365,11 @@
         verbose? (reagent/atom false)]
     (fn []
       [re-com/v-box
-       :gap "1em"
+       :gap "1rem"
        :children [(panel-title "Setup")
                   (section-title "Developer tools")
                   [re-com/h-box
-                   :gap "1em"
+                   :gap "1rem"
                    :children [[re-com/v-box
                                :children [[re-com/label :label "Server cold init:"]
                                           (button [:preload-base]
@@ -378,7 +379,7 @@
                                :children [[re-com/label :label "Choose server:"]
                                           [re-com/single-dropdown :choices [{:id :production :label "production"}
                                                                             {:id :development :label "development"}]
-                                           :width "11em"
+                                           :width "12rem"
                                            :model @server
                                            :on-change #(re-frame/dispatch [:set-server %])]]]]]
                   (section-title "Schema")
@@ -394,9 +395,10 @@
 
 (defn wrap-page [page]
   [re-com/border
-   :margin "3px"
-   :border "1px solid lightgrey"
-   :padding "6px"
+   :width "90vw"
+   :margin "1vmin"
+   :border "0.2vmin solid lightgrey"
+   :padding "1rem"
    :child page])
 
 (def tabs [{:id :home    :label "receipt"   :panel (wrap-page [home-panel])}
@@ -429,7 +431,6 @@
       ;; - No mechanism to get changed schema; especially, e.g., if a client is open for many days
       (re-frame/dispatch [:get-schema :all])
       [re-com/v-box
-       :height "100%"
        :children [[app-title]
                   [tabs-row]
                   [tab-panel]]])))
