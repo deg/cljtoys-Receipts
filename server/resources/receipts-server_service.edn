@@ -7,39 +7,53 @@
  :descriptor
  ;; Datomic Schema Norms
  ;; --------------------
- {:vase/norms {:receipts/schema {:vase.norm/txes
-                                 [#vase/schema-tx
-                                  [[:receipts/dynamic?    :one  :boolean            "Created at runtime?"]
+ {:vase/norms
+  {:receipts/schema
+   {:vase.norm/txes
+    [#vase/schema-tx
+     [[:receipts/dynamic?      :one  :boolean          "Created at runtime?"]
 
-                                   [:category/name          :one  :string :identity "Category name"]
-                                   [:category/description   :one  :string :fulltext "Info about category"]
+      [:category/name          :one  :string :identity "Category name"]
+      [:category/description   :one  :string :fulltext "Info about category"]
 
-                                   [:vendor/name            :one  :string :identity "Vendor name"]
-                                   [:vendor/description     :one  :string :fulltext "Description"]
-                                   [:vendor/category        :many :string           "Category of this vendor"]
+      [:vendor/name            :one  :string :identity "Vendor name"]
+      [:vendor/description     :one  :string :fulltext "Description"]
+      [:vendor/category        :many :string           "Category of this vendor"]
 
-                                   [:user/name              :one  :string :unique   "User name"]
-                                   [:user/abbrev            :one  :string :identity "Brief user name for Excel"]
-                                   [:user/email             :one  :string :unique   "User email"]
-                                   [:user/isSysAdmin        :one  :boolean          "User has full access"]
-                                   [:user/isEditor          :one  :boolean          "User can add entries"]
-                                   [:user/isConsumer        :one  :boolean          "User can be listed as purchaser"]
+      [:user/abbrev            :one  :string :identity "Brief user name for Excel"]
+      [:user/name              :one  :string :unique   "User name"]
+      [:user/email             :one  :string :unique   "User email"]
+      [:user/password          :one  :string           "Password"]
+      [:user/isAdmin           :one  :boolean          "User has full access"]
+      [:user/isEditor          :one  :boolean          "User can add entries"]
+      [:user/isConsumer        :one  :boolean          "User can be listed as purchaser"]
 
-                                   [:paymentMethod/name     :one  :string :unique   "Payment method name"]
-                                   [:paymentMethod/abbrev   :one  :string :identity "Payment method name for Excel"]
+      [:paymentMethod/name     :one  :string :unique   "Payment method name"]
+      [:paymentMethod/abbrev   :one  :string :identity "Payment method name for Excel"]
 
-                                   [:currency/name          :one  :string :unique   "Currency name"]
-                                   [:currency/abbrev        :one  :string :identity "Brief currency name (e.g. USD or GBP)"]
+      [:currency/name          :one  :string :unique   "Currency name"]
+      [:currency/abbrev        :one  :string :identity "Brief currency name (e.g. USD or GBP)"]
 
-                                   [:purchase/uid           :one  :string :identity "Unique id, based on user and time"]
-                                   [:purchase/price         :one  :float            "Price"]
-                                   [:purchase/currency      :one  :string           "Dollars, Shekels, etc."]
-                                   [:purchase/category      :one  :string           "Categoory of purchase"]
-                                   [:purchase/vendor        :one  :string           "Vendor where purchased"]
-                                   [:purchase/paymentMethod :one  :string           "Payment method ID"]
-                                   [:purchase/date          :one  :instant          "When purchased"]
-                                   [:purchase/comment       :one  :string :fulltext "Comment"]
-                                   [:purchase/forWhom       :many :string           "For whom purchased"]]]}}
+      [:purchase/uid           :one  :string :identity "Unique id, based on user and time"]
+      [:purchase/price         :one  :float            "Price"]
+      [:purchase/currency      :one  :string           "Dollars, Shekels, etc."]
+      [:purchase/category      :one  :string           "Categoory of purchase"]
+      [:purchase/vendor        :one  :string           "Vendor where purchased"]
+      [:purchase/paymentMethod :one  :string           "Payment method ID"]
+      [:purchase/date          :one  :instant          "When purchased"]
+      [:purchase/comment       :one  :string :fulltext "Comment"]
+      [:purchase/forWhom       :many :string           "For whom purchased"]]]}
+   :receipts/data
+   {:vase.norm/txes
+    [[{:db/ident        :admin-account
+       :user/abbrev     "Admin"
+       :user/name       "Administrator"
+       :user/email      "admin@degel.com"
+       :user/password   "USHkw329MVp8OgUm5hgJew==" ;; encrypt of, umm, (MAYNARD (ROOT 1654))
+       :user/isAdmin    true
+       :user/isEditor   true
+       :user/isConsumer false}]]}}
+
 
   ;; Global Specs for the API
   ;; ------------------------
@@ -47,193 +61,268 @@
 
   ;; API Tagged Chunks/Versions
   ;; --------------------------
-  :vase/apis {:receipts-server/v1
-              {:vase.api/interceptors [io.pedestal.http/transit-body]
-               :vase.api/routes
-               {"/welcome" {:get #vase/respond {:name :receipts-server.v1/welcome-page
-                                                :body "Welcome to the receipts server, v1.3"}}
+  :vase/apis
+  {:receipts-server/v1
+   {:vase.api/interceptors [io.pedestal.http/transit-body]
+    :vase.api/routes
+    {"/welcome"
+     {:get #vase/respond {:name :receipts-server.v1/welcome-page
+                          :body "Welcome to the receipts server, v1.3"}}
 
-                "/db" {:get #vase/query {:name :receipts-server.v1/db-page
-                                         :params []
-                                         :query [:find ?e ?v
-                                                 :where [?e :db/ident ?v]]}}
-                "/entities" {:get #vase/query {:name :receipts-server.v1/entities-get
-                                               :query [:find [(pull ?e [*]) ...]
-                                                       :where (or [?e :user/name]
-                                                                  [?e :category/name]
-                                                                  [?e :vendor/name]
-                                                                  [?e :paymentMethod/name]
-                                                                  [?e :currency/name]
-                                                                  [?e :purchase/uid])]}}
-                "/entity" {:delete #vase/transact {:name :receipts-server.v1/entity-delete
-                                                   :db-op :vase/retract-entity
-                                                   :properties [:db/id]}}
+;;;     "/db"
+;;;     {:get #vase/query
+;;;      {:name :receipts-server.v1/db-page
+;;;       :params []
+;;;       :query [:find ?e ?v
+;;;               :where [?e :db/ident ?v]]}}
+;;;
+;;;     "/entities"
+;;;     {:get #vase/query
+;;;      {:name :receipts-server.v1/entities-get
+;;;       :query [:find [(pull ?e [*]) ...]
+;;;               :where (or [?e :user/name]
+;;;                          [?e :category/name]
+;;;                          [?e :vendor/name]
+;;;                          [?e :paymentMethod/name]
+;;;                          [?e :currency/name]
+;;;                          [?e :purchase/uid])]}}
+;;;
+;;;     "/entity"
+;;;     {:delete #vase/transact
+;;;      {:name :receipts-server.v1/entity-delete
+;;;       :db-op :vase/retract-entity
+;;;       :properties [:db/id]}}
 
-                "/users" {:get #vase/query {:name :receipts-server.v1/users-get
-                                            :query [:find [(pull ?e [*]) ...]
-                                                    :where [?e :user/name]]}}
-                "/user" {:get #vase/query {:name :receipts-server.v1/user-get
-                                           :params [[email "n/a"] [name "n/a"] [abbrev "n/a"]]
-                                           :query  [:find [(pull ?e [*]) ...]
-                                                    :in $ ?email ?name ?abbrev
-                                                    :where
-                                                    (or-join [?e ?email ?name ?abbrev]
-                                                             (and [?e :user/email ?originalEmail]
-                                                                  [(.toLowerCase ^String ?email) ?lowerCaseEmail]
-                                                                  [(.toLowerCase ^String ?originalEmail) ?lowerCaseEmail])
-                                                             (and [?e :user/name ?originalName]
-                                                                  [(.toLowerCase ^String ?name) ?lowerCaseName]
-                                                                  [(.toLowerCase ^String ?originalName) ?lowerCaseName])
-                                                             [?e :user/abbrev ?abbrev])]}
-                         :post [;;; [TODO] This line may be needed.  See
-                                ;;; - https://github.com/cognitect-labs/vase/issues/68
-                                ;;; - https://github.com/cognitect-labs/vase/blob/master/test/resources/test_descriptor.edn#L120-L128
-                                ;;; - http://pedestal.io/api/pedestal.service/io.pedestal.http.html#var-json-body
-                                ;;; - https://github.com/cognitect-labs/vase/issues/45
-                                ;;; This may require undoing the patch in receipts-client.api-client/api-request
-                                ;;;
-                                ;;;- io.pedestal.http/json-body
-                                #vase/transact {:name :receipts-server.v1/user-create
-                                                :properties [:db/id
-                                                             :receipts/dynamic?
-                                                             :user/name
-                                                             :user/abbrev
-                                                             :user/email
-                                                             :user/isSysAdmin
-                                                             :user/isEditor
-                                                             :user/isConsumer]}]}
+     "/login"
+     {:get [receipts-server.interceptors/validate-login
+            #vase/query
+            {:name :receipts-server.v1/login-get
+             :params [email password]
+             :query [:find [(pull ?e [*] ...)]
+                     :in $ ?email
+                     :where [?e :user/email ?email]]}]}
 
-                "/categories" {:get #vase/query {:name :receipts-server.v1/categories-get
-                                                 :query [:find [(pull ?e [*]) ...]
-                                                         :where [?e :category/name]]}}
-                "/category" {:get #vase/query {:name :receipts-server.v1/category-get
-                                               :params [name]
-                                               :query  [:find [(pull ?e [*]) ...]
-                                                        :in $ ?name
-                                                        :where [?e :category/name ?name]]}
-                             :post #vase/transact {:name :receipts-server.v1/category-create
-                                                   :properties [:db/id
-                                                                :receipts/dynamic?
-                                                                :category/name
-                                                                :category/description]}}
+     "/users"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/intercept
+             {:name :receipts-server.v1/users-get-intercept1
+              :leave (-> :user/password
+                         receipts-server.interceptors/shroud-updater
+                         receipts-server.interceptors/body-updater)}
+            #vase/query
+            {:name :receipts-server.v1/users-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :user/name]]}]}
 
-                "/vendors" {:get #vase/query {:name :receipts-server.v1/vendors-get
-                                              :query [:find [(pull ?e [*]) ...]
-                                                      :where [?e :vendor/name]]}}
-                "/vendor" {:get #vase/query {:name :receipts-server.v1/vendor-get
-                                             :params [name]
-                                             :query  [:find [(pull ?e [*]) ...]
-                                                      :in $ ?name :where [?e :vendor/name ?name]]}
-                           :post #vase/transact {:name :receipts-server.v1/vendor-create
-                                                 :properties [:db/id
-                                                              :receipts/dynamic?
-                                                              :vendor/name
-                                                              :vendor/description
-                                                              :vendor/category]}}
+     "/user"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/user-get
+             :params [[email "n/a"] [name "n/a"] [abbrev "n/a"]]
+             :query  [:find [(pull ?e [*]) ...]
+                      :in $ ?email ?name ?abbrev
+                      :where
+                      (or-join [?e ?email ?name ?abbrev]
+                               (and [?e :user/email ?originalEmail]
+                                    [(.toLowerCase ^String ?email) ?lowerCaseEmail]
+                                    [(.toLowerCase ^String ?originalEmail) ?lowerCaseEmail])
+                               (and [?e :user/name ?originalName]
+                                    [(.toLowerCase ^String ?name) ?lowerCaseName]
+                                    [(.toLowerCase ^String ?originalName) ?lowerCaseName])
+                               [?e :user/abbrev ?abbrev])]}]
+      :post [receipts-server.interceptors/auth-user-id
+            #vase/intercept
+             {:name :receipts-server.v1/user-post-intercept1
+              :enter (-> :user/password
+                         receipts-server.interceptors/encrypt-updater
+                         receipts-server.interceptors/payload-updater)}
+             #vase/transact
+             {:name :receipts-server.v1/user-create
+              :properties [:db/id
+                           :receipts/dynamic?
+                           :user/name
+                           :user/password
+                           :user/abbrev
+                           :user/email
+                           :user/isAdmin
+                           :user/isEditor
+                           :user/isConsumer]}]}
 
+     "/categories"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/categories-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :category/name]]}]}
 
-                "/paymentMethods" {:get #vase/query {:name :receipts-server.v1/paymentMethods-get
-                                                     :query [:find  [(pull ?e [*]) ...]
-                                                             :where [?e :paymentMethod/name]]}}
+     "/category"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/category-get
+             :params [name]
+             :query  [:find [(pull ?e [*]) ...]
+                      :in $ ?name
+                      :where [?e :category/name ?name]]}]
+      :post [receipts-server.interceptors/auth-user-id
+             #vase/transact
+             {:name :receipts-server.v1/category-create
+              :properties [:db/id
+                           :receipts/dynamic?
+                           :category/name
+                           :category/description]}]}
 
-                "/paymentMethod" {:get #vase/query {:name :receipts-server.v1/paymentMethod-get
-                                                    :params [name]
-                                                    :query [:find ?e ?name
-                                                            :in $ ?name
-                                                            :where
-                                                            [?e :paymentMethod/name ?name]]}
-                                  :post #vase/transact {:name :receipts-server.v1/paymentMethod-create
-                                                        :properties [:db/id
-                                                                     :receipts/dynamic?
-                                                                     :paymentMethod/name
-                                                                     :paymentMethod/abbrev]}}
+     "/vendors"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/vendors-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :vendor/name]]}]}
 
-                "/currencies" {:get #vase/query {:name :receipts-server.v1/currencies-get
-                                                 :query [:find [(pull ?e [*]) ...]
-                                                         :where [?e :currency/name]]}}
+     "/vendor"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/vendor-get
+             :params [name]
+             :query  [:find [(pull ?e [*]) ...]
+                      :in $ ?name :where [?e :vendor/name ?name]]}]
+      :post [receipts-server.interceptors/auth-user-id
+             #vase/transact
+             {:name :receipts-server.v1/vendor-create
+              :properties [:db/id
+                           :receipts/dynamic?
+                           :vendor/name
+                           :vendor/description
+                           :vendor/category]}]}
 
-                "/currency" {:get #vase/query {:name :receipts-server.v1/currency-get
-                                               :params [[name "n/a"] [abbrev "n/a"]]
-                                               :query [:find [(pull ?e [*]) ...]
-                                                       :in $ ?name ?abbrev
-                                                       :where
-                                                       (or-join [?e ?name ?abbrev]
-                                                                [?e :currency/name ?name]
-                                                                [?e :currency/abbrev ?abbrev])]}
-                             :post #vase/transact {:name :receipts-server.v1/currency-create
-                                                   :properties [:db/id
-                                                                :receipts/dynamic?
-                                                                :currency/name
-                                                                :currency/abbrev]}}
+     "/paymentMethods"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/paymentMethods-get
+             :query [:find  [(pull ?e [*]) ...]
+                     :where [?e :paymentMethod/name]]}]}
 
-                "/purchases" {:get #vase/query {:name :receipts-server.v1/purchases-get
-                                                :query [:find [(pull ?e [*]) ...]
-                                                        :where [?e :purchase/uid]]}}
+     "/paymentMethod"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/paymentMethod-get
+             :params [name]
+             :query [:find ?e ?name
+                     :in $ ?name
+                     :where
+                     [?e :paymentMethod/name ?name]]}]
+      :post [receipts-server.interceptors/auth-user-id
+             #vase/transact
+             {:name :receipts-server.v1/paymentMethod-create
+              :properties [:db/id
+                           :receipts/dynamic?
+                           :paymentMethod/name
+                           :paymentMethod/abbrev]}]}
 
-                "/about" {:get [#vase/intercept
-                                {:name :receipts-server.v1/about-get-intercept
-                                 :leave (fn [context]
-                                          (update-in context [:response :body]
-                                                     (fn [[count]]
-                                                       {:version (receipts-server.interceptors/project-version)
-                                                        :dependencies(receipts-server.interceptors/dependency-versions)
-                                                        :purchases-count count})))}
-                                #vase/query
-                                {:name :receipts-server.v1/about-get
-                                 :query [:find [(count ?purchases) ...]
-                                         :where [?purchases :purchase/uid]]}]}
+     "/currencies"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/currencies-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :currency/name]]}]}
 
-                "/csv-history" {:get [#vase/intercept
-                                      {:name :receipts-server.v1/cvs-history-get-intercept
-                                       :leave (fn [context]
-                                                (update-in context [:response :body]
-                                                           (fn [body]
-                                                             {:csv (receipts-server.render/csv-purchases body)})))}
-                                      #vase/query
-                                      {:name :receipts-server.v1/csv-history-get
-                                       :query [:find [(pull ?e [*]) ...]
-                                               :where [?e :purchase/uid]]}]}
+     "/currency"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/currency-get
+             :params [[name "n/a"] [abbrev "n/a"]]
+             :query [:find [(pull ?e [*]) ...]
+                     :in $ ?name ?abbrev
+                     :where
+                     (or-join [?e ?name ?abbrev]
+                              [?e :currency/name ?name]
+                              [?e :currency/abbrev ?abbrev])]}]
+      :post [receipts-server.interceptors/auth-user-id
+             #vase/transact
+             {:name :receipts-server.v1/currency-create
+              :properties [:db/id
+                           :receipts/dynamic?
+                           :currency/name
+                           :currency/abbrev]}]}
 
-                "/purchase" {:get #vase/query {:name :receipts-server.v1/purchase-get
-                                               :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
-                                                        [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]
-                                                        [date "n/a"] [comment "n/a"] [forWhom "n/a"]]
-                                               :edn-coerce [date]
-                                               :query [:find [(pull ?e [*]) ...]
-                                                       :in $ ?uid ?price ?currency ?category ?vendor ?paymentMethod ?date ?comment ?forWhom
-                                                       :where
-                                                       (or-join [?e ?uid ?price ?currency ?category ?vendor
-                                                                 ?paymentMethod ?date ?comment ?forWhom]
-                                                                [?e :purchase/uid ?uid]
-                                                                [?e :purchase/price ?price]
-                                                                [?e :purchase/currency ?currency]
-                                                                [?e :purchase/category ?category]
-                                                                [?e :purchase/vendor ?vendor]
-                                                                [?e :purchase/paymentMethod ?by]
-                                                                [?e :purchase/date ?date]
-                                                                [?e :purchase/comment ?comment]
-                                                                [?e :purchase/forWhom ?forWhom])]}
-                             :post [#vase/intercept
-                                    {:name :receipts-server.v1/purchase-post-intercept1
-                                     :enter (fn [context]
-                                              (update-in context [:request :json-params :payload]
-                                                         (receipts-server.interceptors/date-updater :purchase/date)))}
-                                    #vase/intercept
-                                    {:name :receipts-server.v1/purchase-post-intercept2
-                                     :enter (fn [context]
-                                              (update-in context [:request :json-params :payload]
-                                                         (receipts-server.interceptors/float-updater :purchase/price)))}
-                                    #vase/transact {:name :receipts-server.v1/purchase-create
-                                                    :properties [:db/id
-                                                                 :purchase/uid
-                                                                 :receipts/dynamic?
-                                                                 :purchase/price
-                                                                 :purchase/currency
-                                                                 :purchase/category
-                                                                 :purchase/vendor
-                                                                 :purchase/paymentMethod
-                                                                 :purchase/date
-                                                                 :purchase/comment
-                                                                 :purchase/forWhom]}]}}
-               :vase.api/schemas [:receipts/schema]
-               :vase.api/forward-headers ["vaserequest-id"]}}}}
+     "/purchases"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/purchases-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :purchase/uid]]}]}
+
+     "/about"
+     {:get [#vase/intercept
+            {:name :receipts-server.v1/about-get-intercept
+             :leave (fn [context]
+                      (update-in context [:response :body]
+                                 (fn [[count]]
+                                   {:version (receipts-server.interceptors/project-version)
+                                    :dependencies(receipts-server.interceptors/dependency-versions)
+                                    :purchases-count count})))}
+            #vase/query
+            {:name :receipts-server.v1/about-get
+             :query [:find [(count ?purchases) ...]
+                     :where [?purchases :purchase/uid]]}]}
+
+     "/csv-history"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/intercept
+            {:name :receipts-server.v1/cvs-history-get-intercept
+             :leave (fn [context]
+                      (update-in context [:response :body]
+                                 (fn [body]
+                                   {:csv (receipts-server.render/csv-purchases body)})))}
+            #vase/query
+            {:name :receipts-server.v1/csv-history-get
+             :query [:find [(pull ?e [*]) ...]
+                     :where [?e :purchase/uid]]}]}
+
+     "/purchase"
+     {:get [receipts-server.interceptors/auth-user-id
+            #vase/query
+            {:name :receipts-server.v1/purchase-get
+             :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
+                      [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]
+                      [date "n/a"] [comment "n/a"] [forWhom "n/a"]]
+             :edn-coerce [date]
+             :query [:find [(pull ?e [*]) ...]
+                     :in $ ?uid ?price ?currency ?category ?vendor ?paymentMethod ?date ?comment ?forWhom
+                     :where
+                     (or-join [?e ?uid ?price ?currency ?category ?vendor
+                               ?paymentMethod ?date ?comment ?forWhom]
+                              [?e :purchase/uid ?uid]
+                              [?e :purchase/price ?price]
+                              [?e :purchase/currency ?currency]
+                              [?e :purchase/category ?category]
+                              [?e :purchase/vendor ?vendor]
+                              [?e :purchase/paymentMethod ?by]
+                              [?e :purchase/date ?date]
+                              [?e :purchase/comment ?comment]
+                              [?e :purchase/forWhom ?forWhom])]}]
+      :post [receipts-server.interceptors/auth-user-id
+             #vase/intercept
+             {:name :receipts-server.v1/purchase-post-intercept1
+              :enter (-> :purchase/date
+                         receipts-server.interceptors/date-updater
+                         receipts-server.interceptors/payload-updater)}
+             #vase/intercept
+             {:name :receipts-server.v1/purchase-post-intercept2
+              :enter (-> :purchase/price
+                         receipts-server.interceptors/float-updater
+                         receipts-server.interceptors/payload-updater)}
+             #vase/transact
+             {:name :receipts-server.v1/purchase-create
+              :properties [:db/id
+                           :purchase/uid
+                           :receipts/dynamic?
+                           :purchase/price
+                           :purchase/currency
+                           :purchase/category
+                           :purchase/vendor
+                           :purchase/paymentMethod
+                           :purchase/date
+                           :purchase/comment
+                           :purchase/forWhom]}]}}
+    :vase.api/schemas [:receipts/schema receipts/data]
+    :vase.api/forward-headers ["vaserequest-id"]}}}}

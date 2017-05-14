@@ -4,16 +4,20 @@
 (ns receipts-client.utils)
 
 
-(defn filter-by [keyfn pred coll]
-  (filter #(pred (keyfn %)))
-  )
+(defn assoc-if
+  "Like assoc, but takes pairs as a map, and only assocs non-nil values"
+  [m kvs]
+  (into m (remove (comp nil? val) kvs)))
 
-;;; coll is a sequence of maps.
-;;; Find the element of coll for whose id-key value is id
-;;; Return the value at key
 
-(defn get-at [coll id-key id key]
-  (-> #(= (id-key %) id)
-      (filter coll)
-      first
-      key))
+
+(defn get-at
+  "Coll is a sequence of maps.
+  Find the element of coll for whose id-key value is id.
+  Return the value at key."
+  ([coll id-key id]
+   (-> #(= (id-key %) id)
+       (filter coll)
+       first))
+  ([coll id-key id key]
+   (key (get-at coll id-key id))))

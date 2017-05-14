@@ -41,7 +41,9 @@
   [re-com/button
    :label label
    :tooltip tooltip
-   :on-click #(re-frame/dispatch dispatch)])
+   :on-click #(if (vector? dispatch)
+                (re-frame/dispatch dispatch)
+                (dispatch))])
 
 (defn labelled [label error component]
   (fn [label error component]
@@ -125,6 +127,31 @@
                                       @schema)))
      :on-change #(re-frame/dispatch [:edit-current-receipt field-key %])]))
 
+
+(defn login-panel []
+  (let [email (reagent/atom "")
+        password (reagent/atom "")]
+    (fn []
+      [re-com/v-box
+       :gap "0.5rem"
+       :children [(panel-title "Login")
+                  [labelled "Email" nil
+                   [re-com/input-text
+                    :width "15rem"
+                    :model email
+                    :on-change #(reset! email %)
+                    :attr {:type "Email"}]]
+                  [labelled "Password" nil
+                   [re-com/input-text
+                    :width "15rem"
+                    :model password
+                    :on-change #(reset! password %)
+                    :attr {:type "Password"}]]
+                  [button [:login @email @password] "Login" "Login to server"]]])))
+
+(defn unavailable []
+  [:div [:em "(Unavailable)"]])
+
 ;;; See https://funcool.github.io/struct/latest/
 ;;; [TODO] Replace with spec, asap.
 (def complete-receipt
@@ -191,6 +218,7 @@
            [dropdown :multiple? true
             :field-key :purchase/forWhom
             :subs-key :users
+            :filter-fn :user/isConsumer
             :schema-label-key :user/name
             :schema-id-key :user/abbrev]]
           [re-com/gap :size "0.5rem"]
@@ -202,10 +230,60 @@
              :label "Submit Receipt"]]]]]))))
 
 (defn home-panel []
-  [re-com/v-box
-   :gap "1rem"
-   :children [(panel-title "New Receipt")
-              [receipt-page]]])
+  (let [credentials (re-frame/subscribe [:credentials])]
+    (fn []
+      (if @credentials
+        [re-com/v-box
+         :gap "1rem"
+         :children [(panel-title "New Receipt")
+                    [receipt-page]]]
+        [login-panel]))))
+
+(defn add-user []
+  (let [new-user (reagent/atom {})]
+    (fn []
+      (let [editor? (or (-> @new-user :permissions :user/isAdmin)
+                        (-> @new-user :permissions :user/isEditor))
+            consumer? (-> @new-user :permissions :user/isConsumer)]
+        [re-com/v-box
+         :gap "0.5rem"
+         :children [[labelled "Name" nil
+                     [re-com/input-text
+                      :width "15rem"
+                      :model (or (:name @new-user) "")
+                      :on-change #(swap! new-user assoc :name %)
+                      :attr {:type "text"}]]
+                    (when editor?
+                      [labelled "Password" nil
+                       [re-com/input-text
+                        :width "15rem"
+                        :model (or (:password @new-user) "")
+                        :on-change #(swap! new-user assoc :password %)
+                        :attr {:type "password"}]])
+                    (when consumer?
+                      [labelled "Abbrev" nil
+                       [re-com/input-text
+                        :width "15rem"
+                        :model (or (:abbrev @new-user) "")
+                        :on-change #(swap! new-user assoc :abbrev %)
+                        :attr {:type "text"}]])
+                    (when editor?
+                      [labelled "Email" nil
+                       [re-com/input-text
+                        :width "15rem"
+                        :model (or (:email @new-user) "")
+                        :on-change #(swap! new-user assoc :email %)
+                        :attr {:type "Email"}]])
+                    [labelled "Permissions" nil
+                     [re-com/selection-list
+                      :choices [{:id :user/isAdmin :label "Administrator"}
+                                {:id :user/isEditor :label "Editor"}
+                                {:id :user/isConsumer :label "Consumer"}]
+                      :model (or (:permissions @new-user) #{})
+                      :on-change #(swap! new-user assoc :permissions %)]]
+                    [button #(do (re-frame/dispatch [:add-user @new-user])
+                                 (reset! new-user {}))
+                     "Add User" "Create a new user"]]]))))
 
 (defn add-payment-method []
   [:div "NYI (payment methods)"])
@@ -223,7 +301,7 @@
        :children [[labelled "Category" nil
                    [re-com/single-dropdown
                     :width "12rem"
-                    :choices @categories
+                    :choices categories
                     :id-fn :db/id
                     :label-fn :category/name
                     :model category
@@ -233,38 +311,48 @@
                     :model vendor
                     :on-change #(reset! vendor %)
                     :width "12rem"]]
-                  [button [:add-vendor @category @vendor] "Add Vendor" "Create a new vendor"]]])))
+                  [button #(do (re-frame/dispatch [:add-vendor @category @vendor])
+                               (reset! vendor ""))
+                   "Add Vendor" "Create a new vendor"]]])))
 
 (defn edit-panel []
-  (let [actions [{:id :add :label "Add"}
+  (let [user (re-frame/subscribe [:user])
+        actions [{:id :add :label "Add"}
                  {:id :edit :label "Edit"}]
-        entities [{:id :payment-method :label "Payment Method"}
+        entities [{:id :user :label "User"}
+                  {:id :payment-method :label "Payment Method"}
                   {:id :category :label "Category"}
                   {:id :vendor :label "vendor"}]
         action (reagent/atom :add)
         entity (reagent/atom :vendor)]
     (fn []
-      [re-com/v-box
-       :gap "1rem"
-       :children [[panel-title "Schema Editor"]
-                  [labelled "Schema change" nil
-                   [re-com/h-box
-                    :gap "0.5rem"
-                    :children [[re-com/single-dropdown :width  "5rem"
-                                :choices actions :model action
-                                :on-change #(reset! action %)]
-                               [re-com/single-dropdown :width "11rem"
-                                :choices entities :model entity
-                                :on-change #(reset! entity %)]]]]
-                  [panel-subtitle (str (utils/get-at actions :id @action :label) " "
-                                       (utils/get-at entities :id @entity :label))]
-                  (case @action
-                    :add (case @entity
-                           :payment-method [add-payment-method]
-                           :category [add-category]
-                           :vendor [add-vendor]
-                           [:div "ERROR??"])
-                    :edit [:div "NYI"])]])))
+      (if @user
+        (let [admin? (:user/isAdmin @user)]
+          [re-com/v-box
+           :gap "1rem"
+           :children [[panel-title "Schema Editor"]
+                      [labelled "Schema change" nil
+                       [re-com/h-box
+                        :gap "0.5rem"
+                        :children [[re-com/single-dropdown :width  "5rem"
+                                    :choices actions
+                                    :model action
+                                    :on-change #(reset! action %)]
+                                   [re-com/single-dropdown :width "11rem"
+                                    :choices entities
+                                    :model entity
+                                    :on-change #(reset! entity %)]]]]
+                      [panel-subtitle (str (utils/get-at actions :id @action :label) " "
+                                           (utils/get-at entities :id @entity :label))]
+                      (case @action
+                        :add (case @entity
+                               :user (if admin? [add-user] [unavailable])
+                               :payment-method [add-payment-method]
+                               :category [add-category]
+                               :vendor [add-vendor]
+                               [:div "ERROR??"])
+                        :edit [:div "NYI"])]])
+        [login-panel]))))
 
 (defn about-panel []
   (let [about-server (re-frame/subscribe [:about-server])]
@@ -284,8 +372,10 @@
                      (map (fn [[dependency version]]
                             ^{:key dependency}[:li (goog.string/format "%s:%s" dependency version)])
                           (sort-by first (:dependencies @about-server)))]]
-                   [:p [:em "Copyright (c) 2017, David Goldfarb <deg@degel.com>.
-                             Portions copyright 2013-2016."]]]]])))
+                   [:p
+                    [:em "Copyright (c) 2017, David Goldfarb <deg@degel.com>"]
+                    [:br]
+                    [:em "Portions copyright 2013-2016."]]]]])))
 
 (def date-format (time-format/formatter "ddMMMyy"))
 (def time-format (time-format/formatter "HH:mm:ss"))
@@ -337,16 +427,23 @@
    :disabled? true])
 
 (defn history-panel []
-  (let [history (re-frame/subscribe [:history])
+  (let [user (re-frame/subscribe [:user])
+        history (re-frame/subscribe [:history])
         csv (re-frame/subscribe [:history-csv])]
     (fn []
-      [re-com/v-box
-       :gap "1rem"
-       :children [(panel-title "History")
-                  [history-table @history]
-                  [history-csv @csv]
-                  [re-com/h-box
-                   :children [(button [:get-history] "Refresh History" "Load history from server")]]]])))
+      (if @user
+        (let [consumer? (:user/isConsumer @user)
+              editor? (:user/isEditor @user)
+              admin? (:user/isAdmin @user)]
+          [re-com/v-box
+           :gap "1rem"
+           :children [(panel-title "History")
+                      [history-table @history]
+                      (when admin?
+                        [history-csv @csv])
+                      [re-com/h-box
+                       :children [(button [:get-history] "Refresh History" "Load history from server")]]]])
+        [login-panel]))))
 
 (defn formatted-schema [title schema-part only-dynamic?]
   [re-com/v-box
@@ -359,39 +456,56 @@
                           (filter :receipts/dynamic? schema-part)
                           schema-part))]]])
 
-(defn setup-panel []
+(defn config-panel []
   (let [server (re-frame/subscribe [:server])
+        user (re-frame/subscribe [:user])
         schema (re-frame/subscribe [:schema])
         verbose? (reagent/atom false)]
     (fn []
-      [re-com/v-box
-       :gap "1rem"
-       :children [(panel-title "Setup")
-                  (section-title "Developer tools")
-                  [re-com/h-box
-                   :gap "1rem"
-                   :children [[re-com/v-box
-                               :children [[re-com/label :label "Server cold init:"]
-                                          (button [:preload-base]
-                                                  "Preload database"
-                                                  "Install initial DB (you should not need this)")]]
-                              [re-com/v-box
-                               :children [[re-com/label :label "Choose server:"]
-                                          [re-com/single-dropdown :choices [{:id :production :label "production"}
-                                                                            {:id :development :label "development"}]
-                                           :width "12rem"
-                                           :model @server
-                                           :on-change #(re-frame/dispatch [:set-server %])]]]]]
-                  (section-title "Schema")
-                  (re-com/checkbox
-                   :model verbose?
-                   :on-change #(reset! verbose? %)
-                   :label "Show all?")
-                  (formatted-schema "Users" (:users @schema) (not @verbose?))
-                  (formatted-schema "Payment Methods" (:payment-methods @schema) (not @verbose?))
-                  (formatted-schema "Currencies" (:currencies @schema) (not @verbose?))
-                  (formatted-schema "Categories" (:categories @schema) (not @verbose?))
-                  (formatted-schema "Vendors" (:vendors @schema) (not @verbose?))]])))
+      (let [email (:user/email @user)
+            consumer? (:user/isConsumer @user)
+            editor? (:user/isEditor @user)
+            admin? (:user/isAdmin @user)]
+        [re-com/v-box
+         :gap "1rem"
+         :children [(panel-title "Setup")
+                    [re-com/h-box
+                     :gap "1rem"
+                     :children [[:span (str "Logged in as " email)]
+                                [button [:logout] "Logout" "Logout from server"]]]
+                    (section-title "Developer tools")
+                    (if admin?
+                      [re-com/h-box
+                                  :gap "1rem"
+                                  :children [[re-com/v-box
+                                              :children [[re-com/label :label "Server cold init:"]
+                                                         (button [:preload-base]
+                                                                 "Preload database"
+                                                                 "Install initial DB (you should not need this)")]]
+                                             [re-com/v-box
+                                              :children [[re-com/label :label "Choose server:"]
+                                                         [re-com/single-dropdown :choices [{:id :production :label "production"}
+                                                                                           {:id :development :label "development"}]
+                                                          :width "12rem"
+                                                          :model @server
+                                                          :on-change #(re-frame/dispatch [:set-server %])]]]]]
+                      [unavailable])
+                    (section-title "Schema")
+                    (re-com/checkbox
+                     :model verbose?
+                     :on-change #(reset! verbose? %)
+                     :label "Show all?")
+                    (when admin?
+                      (formatted-schema "Users" (:users @schema) (not @verbose?)))
+                    (formatted-schema "Payment Methods" (:payment-methods @schema) (not @verbose?))
+                    (formatted-schema "Currencies" (:currencies @schema) (not @verbose?))
+                    (formatted-schema "Categories" (:categories @schema) (not @verbose?))
+                    (formatted-schema "Vendors" (:vendors @schema) (not @verbose?))]]))))
+
+(defn setup-panel []
+  (let [credentials (re-frame/subscribe [:credentials])]
+    (fn []
+      (if @credentials [config-panel] [login-panel]))))
 
 (defn wrap-page [page]
   [re-com/border
@@ -405,7 +519,7 @@
            {:id :edit    :label "edit"      :panel (wrap-page [edit-panel])}
            {:id :history :label "history"   :panel (wrap-page [history-panel])}
            {:id :about   :label "about"     :panel (wrap-page [about-panel])}
-           {:id :setup   :label "dev setup" :panel (wrap-page [setup-panel])}])
+           {:id :setup   :label "setup"     :panel (wrap-page [setup-panel])}])
 
 (defn tab-panel []
   (let [page (re-frame/subscribe [:page])]
@@ -429,7 +543,7 @@
       ;; [TODO] This gets the schema once when the program starts. This is probably wrong:
       ;; - I don't know if this is called at the best time or place
       ;; - No mechanism to get changed schema; especially, e.g., if a client is open for many days
-      (re-frame/dispatch [:get-schema :all])
+      (re-frame/dispatch [:update-credentials])
       [re-com/v-box
        :children [[app-title]
                   [tabs-row]

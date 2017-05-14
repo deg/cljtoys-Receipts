@@ -20,7 +20,7 @@
                                     (str price)
                                     category
                                     vendor
-                                    comment
+                                    (or comment "")
                                     currency
                                     (str/join ", " forWhom)))
                           (sort-by :purchase/date purchases)))]

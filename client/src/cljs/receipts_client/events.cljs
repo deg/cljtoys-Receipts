@@ -5,6 +5,7 @@
   (:require  [ajax.core :as ajax]
              [cljs-time.core :as time]
              [cljs-time.coerce :as time-coerce]
+             [com.smxemail.re-frame-cookie-fx]
              [day8.re-frame.http-fx]
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
@@ -13,6 +14,9 @@
              [receipts-client.routes :as routes]
              [receipts-client.utils :as utils]))
 
+
+;;; [TODO] See comment at routes/goto-page
+;;;        (re https://github.com/SMX-LTD/re-frame-document-fx)
 (re-frame/reg-fx
  :goto-page
  (fn goto-page [[page server]]
@@ -39,48 +43,106 @@
 (re-frame/reg-event-fx
  :set-server
  (fn set-server [{db :db} [_ server]]
-   {:dispatch [:set-page (:page db) server]
+   {:db (dissoc db :schema)
+    :dispatch [:set-page (:page db) server]
     :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]}))
 
+(re-frame/reg-event-fx
+ :login
+ (fn login [{db :db} [_ email password]]
+   {:http-xhrio (api/get-request {:server (:server db)
+                                  :api "login"
+                                  :params {:user/email email
+                                           :user/password password}
+                                  :on-success [:got-login]})}))
+
+;;; [TODO] Should really use local-storage, rather than cookies, since we are only using
+;;; this locally. This will mean spending a few minutes remembering the local-storage
+;;; API and wrapping it in an fx.
+;;; (Remember that our API server is not at the same domain as our web
+;;; server, so we can't send cookies with the API requests. If we could this could be a
+;;; bit simpler -- we would not have to explicitly add credentials into each API request).
+
+(def cookie-lifetime (* 60 60 24 365)) ;; One year, in seconds
+(def email-cookie :email #_"receipts-credentials-email")
+(def token-cookie :token #_"receipts-credentials-token")
+
+(re-frame/reg-event-fx
+ :got-login
+ (fn got-login [{db :db} [_ {credentials :user/credentials}]]
+   (let [server (:server db)
+         email (:user/email credentials)
+         token (:user/token credentials)]
+     {:cookie/set [{:name email-cookie :value email :max-age cookie-lifetime}
+                   {:name token-cookie :value token :max-age cookie-lifetime}]
+      :dispatch-later [{:ms 100 :dispatch [:update-credentials]}]})))
+
+(defn cookie-noop [db _]
+  db)
+
+(re-frame/reg-event-db :cookie-set-no-on-success cookie-noop)
+(re-frame/reg-event-db :cookie-set-no-on-failure cookie-noop)
+
+(re-frame/reg-event-db :cookie-remove-no-on-success cookie-noop)
+(re-frame/reg-event-db :cookie-remove-no-on-failure cookie-noop)
+
+
+(re-frame/reg-event-fx
+ :logout
+ (fn logout [{db :db} _]
+   {:db (dissoc db :credentials :schema)
+    :cookie/remove [{:name email-cookie}
+                    {:name token-cookie}]}))
+
+(re-frame/reg-event-fx
+ :update-credentials
+ [(re-frame/inject-cofx :cookie/get [email-cookie token-cookie])]
+ (fn update-credentials [{db :db {:keys [email token]} :cookie/get}]
+   {:db (-> db
+              (assoc-in [:credentials (:server db) :user/email] email)
+              (assoc-in [:credentials (:server db) :user/token] token))
+    :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]}))
 
 (re-frame/reg-event-fx
  :preload-base
   (fn preload-base [{db :db} _]
-    {:http-xhrio (preload/initial-data (:server db))
+    {:http-xhrio (preload/initial-data
+                  (:server db) (-> db :credentials ((:server db))))
      :db  (assoc db :loading? true)}))
 
 (re-frame/reg-event-fx
  :get-schema
-  (fn get-schema [{db :db} [_ api]]
-    (let [server (:server db)]
-      {:http-xhrio (remove nil?
-                           [(when (#{:all "category"} api)
-                              (api/get-request {:server server
-                                                :api "categories"
-                                                :params {}
-                                                :on-success [:got-schema :categories]}))
-                            (when (#{:all "currency"} api)
-                              (api/get-request {:server server
-                                                :api "currencies"
-                                                :params {}
-                                                :on-success [:got-schema :currencies]}))
+ (fn get-schema [{db :db} [_ api]]
+   (let [server (:server db)
+         credentials (when server (-> db :credentials server))]
+     (when credentials
+       {:http-xhrio (remove nil?
+                            [(when (#{:all "category"} api)
+                               (api/get-request {:server server
+                                                 :api "categories"
+                                                 :params credentials
+                                                 :on-success [:got-schema :categories]}))
+                             (when (#{:all "currency"} api)
+                               (api/get-request {:server server
+                                                 :api "currencies"
+                                                 :params credentials
+                                                 :on-success [:got-schema :currencies]}))
 
-                            (when (#{:all "paymentMethod"} api)
-                              (api/get-request {:server server
-                                                :api "paymentMethods"
-                                                :params {}
-                                                :on-success [:got-schema :payment-methods]}))
-                            (when (#{:all "user"} api)
-                              (api/get-request {:server server
-                                                :api "users"
-                                                :params {}
-                                                :on-success [:got-schema :users]}))
-                            (when (#{:all "vendor"} api)
-                              (api/get-request {:server server
-                                                :api "vendors"
-                                                :params {}
-                                                :on-success [:got-schema :vendors]}))])
-       :db  (assoc db :loading? true)})))
+                             (when (#{:all "paymentMethod"} api)
+                               (api/get-request {:server server
+                                                 :api "paymentMethods"
+                                                 :params credentials
+                                                 :on-success [:got-schema :payment-methods]}))
+                             (when (#{:all "user"} api)
+                               (api/get-request {:server server
+                                                 :api "users"
+                                                 :params credentials
+                                                 :on-success [:got-schema :users]}))
+                             (when (#{:all "vendor"} api)
+                               (api/get-request {:server server
+                                                 :api "vendors"
+                                                 :params credentials
+                                                 :on-success [:got-schema :vendors]}))])}))))
 
 (re-frame/reg-event-db
  :got-schema
@@ -92,14 +154,17 @@
 (re-frame/reg-event-fx
  :get-history
  (fn get-history [{db :db} _]
-   {:http-xhrio [(api/get-request {:server (:server db)
-                                   :api "purchases"
-                                   :params {}
-                                   :on-success [:got-history]})
-                 (api/get-request {:server (:server db)
-                                   :api "csv-history"
-                                   :params {}
-                                   :on-success [:got-csv-history]})]}))
+   (let [server (:server db)
+         credentials (-> db :credentials server)]
+     (when credentials
+       {:http-xhrio [(api/get-request {:server server
+                                       :api "purchases"
+                                       :params credentials
+                                       :on-success [:got-history]})
+                     (api/get-request {:server server
+                                       :api "csv-history"
+                                       :params credentials
+                                       :on-success [:got-csv-history]})]}))))
 
 (re-frame/reg-event-db
  :got-history
@@ -130,23 +195,27 @@
  (fn edit-current-receipt [db [_ field value]]
    (assoc-in db [:current-receipt field] value)))
 
+(defn post-params [db api on-success params]
+  (api/post-request
+   {:server (:server db)
+    :api api
+    :params {:credentials (-> db :credentials ((:server db)))
+             :payload [(api/string-keyed params)]}
+    :on-success on-success}))
+
 (re-frame/reg-event-fx
  :submit-receipt
  (fn submit-receipt [{db :db} [_ receipt]]
-   {:http-xhrio (api/post-request {:server (:server db)
-                                   :api "purchase"
-                                   :params (assoc receipt
-                                                  ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
-                                                  :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))
-                                                  ;; [TODO]  Need better UID
-                                                  :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
-                                                  :purchase/price (js/parseFloat (:purchase/price receipt))
-                                                  ;; [TODO] temp
-                                                  :purchase/currency "NIS")
-                                   :on-success [:submitted-receipt]}
-                 ;; [TODO] Need to handle server error, and restore previous receipt
-                 ;; [TODO] Need to go to page that prevents new data entry until previous processed
-                 )
+   {:http-xhrio (post-params
+                 db "purchase" [:submitted-receipt]
+                 (assoc receipt
+                        ;; [TODO]  Fixup use of Transit for Post (code location #4 for this issue)
+                        :purchase/date (.toJSON (time-coerce/to-date (:purchase/date receipt)))
+                        ;; [TODO]  Need better UID
+                        :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
+                        :purchase/price (js/parseFloat (:purchase/price receipt))
+                        ;; [TODO] temp
+                        :purchase/currency "NIS"))
     :db (assoc db
                :previous-receipt receipt)}))
 
@@ -161,16 +230,33 @@
    (update db :current-receipt reset-receipt)))
 
 (re-frame/reg-event-fx
+ :add-user
+ (fn add-user [{db :db} [_ {:keys [name password abbrev email permissions] :as user}]]
+   {:http-xhrio (let [admin? (contains? permissions :user/isAdmin)
+                      editor? (contains? permissions :user/isEditor)
+                      consumer? (contains? permissions :user/isConsumer)]
+                  (post-params
+                   db "user" [:get-schema "user"]
+                   (utils/assoc-if {}
+                     {"receipts/dynamic?" true
+                      "user/name" name
+                      "user/password" (when (or admin? editor?) password)
+                      "user/abbrev" (when consumer? abbrev)
+                      "user/email" (when (or admin? editor?) email)
+                      "user/isAdmin" admin?
+                      "user/isEditor" editor?
+                      "user/isConsumer" consumer?})))}))
+
+(re-frame/reg-event-fx
  :add-vendor
  (fn add-vendor [{db :db} [_ category-id vendor]]
    (let [categories (get-in db [:schema :categories])
          category (utils/get-at categories :db/id category-id :category/name)]
-     {:http-xhrio (api/post-request {:server (:server db)
-                                     :api "vendor"
-                                     :params {"receipts/dynamic?" true
-                                              "vendor/name" vendor
-                                              "vendor/category" category}
-                                     :on-success [:get-schema "vendor"]})})))
+     {:http-xhrio (post-params
+                   db "vendor" [:get-schema "vendor"]
+                   {"receipts/dynamic?" true
+                    "vendor/name" vendor
+                    "vendor/category" category})})))
 
 (re-frame/reg-event-db
  :process-failure

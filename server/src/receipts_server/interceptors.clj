@@ -5,13 +5,25 @@
   (:require
    [clojure.instant :as instant]
    [io.pedestal.interceptor :as i]
-   [io.pedestal.log :as log]))
+   [io.pedestal.interceptor.chain :as chain]
+   [io.pedestal.log :as log])
+  (:import [javax.crypto Cipher SecretKey]
+           [javax.crypto.spec SecretKeySpec]
+           [java.util Base64]))
 
 (defn update-field [f field payloads]
   (map #(if (field %)
           (update % field f)
           %)
        payloads))
+
+(defn payload-updater [updater]
+  (fn [context]
+    (update-in context [:request :json-params :payload] updater)))
+
+(defn body-updater [updater]
+  (fn [context]
+    (update-in context [:response :body] updater)))
 
 ;;; Parse incoming date string
 ;;; Originally based on
@@ -39,3 +51,93 @@
        (into {})
        :dependencies
        (map (partial take 2))))
+
+
+;;; ================================================================
+
+;;; Half-baked authentication, based on
+;;; https://github.com/cognitect-labs/vase/blob/master/samples/petstore-full/src/petstore_full/interceptors.clj
+
+;; setup for encrypt/decrypt
+;; [TODO] Get from env
+(def secret-key "It Is Secret Key")  ;; exactly 16 bytes
+(def ^SecretKey skey (SecretKeySpec. (.getBytes secret-key "UTF-8") "AES"))
+(def ^Cipher encryptor (doto (Cipher/getInstance "AES") (.init Cipher/ENCRYPT_MODE skey)))
+(def ^Cipher decryptor (doto (Cipher/getInstance "AES") (.init Cipher/DECRYPT_MODE skey)))
+
+(defn encrypt
+  "Encrypts input String"
+  [s]
+  (let [bytes (.doFinal encryptor (.getBytes s "UTF-8"))]
+    (.encodeToString (Base64/getEncoder) bytes)))
+
+(defn encrypt-updater [field]
+  (partial update-field encrypt field))
+
+(defn decrypt
+  "Decrypts input String"
+  [s]
+  (let [bytes (.decode (Base64/getDecoder) s)
+        bytes (.doFinal decryptor bytes)]
+    (String. bytes)))
+
+(defn decrypt-updater [field]
+  (partial update-field decrypt field))
+
+(defn shroud
+  "Replace string with anodyne value"
+  [_]
+  "********")
+
+(defn shroud-updater [field]
+  (partial update-field shroud field))
+
+;;; [TODO] Alert: ad-hoc security.
+;;; I'm uncomfortable about releasing the stored encrypted passwords into the wild. So,
+;;; for an added bit of obscurity release as "tokens" after an additional round of
+;;; encryption.  Barf?
+
+(defn password->token [password]
+  (-> password encrypt encrypt))
+
+(defn encrypted->token [encrypted]
+  (encrypt encrypted))
+
+(defn terminate-with-error [context status body]
+  (-> context
+      (assoc-in [:response :body] body)
+      (assoc-in [:response :status] status)
+      chain/terminate))
+
+(def validate-login
+  (i/interceptor
+   {:name :validate-login
+    :leave (fn [context]
+             (let [body (get-in context [:response :body])]
+               (if (next body)
+                 (terminate-with-error context 500 {:error (str "Duplicated email: " body)})
+                 (let [user (first body)
+                       old-encrypted (:user/password user)
+                       encrypted (encrypt (get-in context [:request :params :password]))
+                       editor? (:user/isEditor user)]
+                   (if (and editor? (= encrypted old-encrypted))
+                     (assoc-in context [:response :body]
+                               {:user/credentials
+                                {:user/email (:user/email user)
+                                 :user/token (encrypted->token (:user/password user))}})
+                     (terminate-with-error context 401 {:error "Login failed"}))))))}))
+
+(def auth-user-id
+  (i/interceptor
+   {:name ::auth-user
+    :enter (fn [context]
+             (let [request (:request context)
+                   {:keys [request-method params json-params]} request
+                   get? (= request-method :get)
+                   params (if (= request-method :get) params json-params)
+                   email (if get? (:email params) (-> json-params :credentials :email))
+                   token (if get? (:token params) (-> json-params :credentials :token))]
+               (if token ;; [TODO] Check token against DB (!!!)
+                 context
+                 (terminate-with-error context 401 {:error "User not authorized"}))))}))
+

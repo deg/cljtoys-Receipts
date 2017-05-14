@@ -49,6 +49,14 @@ The production build is driven by scripts in my [lightsail-config](https://githu
 
 The remote_build.sh script in that project will rebuild this project and upload it to the server
 
+# Running
+
+... not yet tested ...
+To start Datomic
+```
+~/datomic/datomic-pro-0.9.5561/bin/transactor ~/Documents/git/projects/lightsail-config/dev-transactor-with-license.properties
+```
+
 
 # Contributing
 

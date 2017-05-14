@@ -50,5 +50,7 @@
 
   (hook-browser-navigation!))
 
+;;; [TODO] If we extend this at all, strongly consider replacing this ad-hoc code with
+;;;        https://github.com/SMX-LTD/re-frame-document-fx
 (defn goto-page [page server]
   (aset js/window "location" (str "/#/" (name page) "?" (server-qp server))))
