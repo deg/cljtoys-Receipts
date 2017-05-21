@@ -1,17 +1,17 @@
 (defproject receipts-client "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.542"]
-                 [reagent "0.6.0"]
-                 [re-frame "0.9.2"]
-                 [re-frisk "0.3.2"]
-                 [org.clojure/core.async "0.2.391"]
+                 [reagent "0.6.2"]
+                 [re-frame "0.9.3"]
+                 [re-frisk "0.4.5"]
+                 [org.clojure/core.async "0.3.442"]
                  [re-com "2.0.0"]
                  [secretary "1.2.3"]
                  [garden "1.3.2"]
-                 [ns-tracker "0.3.0"]
-                 [cljs-ajax "0.5.8"]
+                 [ns-tracker "0.3.1"]
+                 [cljs-ajax "0.6.0"]
                  [day8.re-frame/http-fx "0.1.3"]
-                 [com.andrewmcveigh/cljs-time "0.5.0-alpha2"]
+                 [com.andrewmcveigh/cljs-time "0.5.0"]
                  [funcool/struct "1.0.0"]
 
                  ;; Cookie support
@@ -40,11 +40,11 @@
 
   :profiles
   {:dev
-   {:dependencies [[binaryage/devtools "0.8.2"]
-                   [figwheel-sidecar "0.5.9"]
+   {:dependencies [[binaryage/devtools "0.9.4"]
+                   [figwheel-sidecar "0.5.10"]
                    [com.cemerick/piggieback "0.2.1"]]
 
-    :plugins      [[lein-figwheel "0.5.9"]
+    :plugins      [[lein-figwheel "0.5.10"]
                    [lein-doo "0.1.7"]]}}
 
   :cljsbuild
