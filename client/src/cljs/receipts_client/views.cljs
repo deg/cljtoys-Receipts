@@ -230,9 +230,9 @@
              :label "Submit Receipt"]]]]]))))
 
 (defn home-panel []
-  (let [credentials (re-frame/subscribe [:credentials])]
+  (let [user (re-frame/subscribe [:user])]
     (fn []
-      (if @credentials
+      (if (:user/isEditor @user)
         [re-com/v-box
          :gap "1rem"
          :children [(panel-title "New Receipt")
@@ -471,7 +471,7 @@
          :children [(panel-title "Setup")
                     [re-com/h-box
                      :gap "1rem"
-                     :children [[:span (str "Logged in as " email)]
+                     :children [[:span (str "Logged in as " (or email "[UNKNOWN USER]"))]
                                 [button [:logout] "Logout" "Logout from server"]]]
                     (section-title "Developer tools")
                     (if admin?

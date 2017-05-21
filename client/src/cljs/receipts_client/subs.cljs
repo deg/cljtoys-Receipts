@@ -46,12 +46,15 @@
  (fn credentials [db _]
    (-> db :credentials ((:server db)))))
 
+(defn current-user [db]
+  (let [credentials (-> db :credentials ((:server db)))
+        users (-> db :schema :users)]
+    (utils/get-at users :user/email (:user/email credentials))))
+
 (re-frame/reg-sub
  :user
  (fn user [db _]
-   (let [credentials (-> db :credentials ((:server db)))
-         users (-> db :schema :users) ]
-     (utils/get-at users :user/email (:user/email credentials)))))
+   (current-user db)))
 
 (re-frame/reg-sub
  :categories

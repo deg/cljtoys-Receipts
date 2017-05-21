@@ -12,6 +12,7 @@
              [receipts-client.db :as db]
              [receipts-client.preload :as preload]
              [receipts-client.routes :as routes]
+             [receipts-client.subs :as subs]
              [receipts-client.utils :as utils]))
 
 
@@ -64,8 +65,8 @@
 ;;; bit simpler -- we would not have to explicitly add credentials into each API request).
 
 (def cookie-lifetime (* 60 60 24 365)) ;; One year, in seconds
-(def email-cookie :email #_"receipts-credentials-email")
-(def token-cookie :token #_"receipts-credentials-token")
+(def email-cookie "email")
+(def token-cookie "token")
 
 (re-frame/reg-event-fx
  :got-login
@@ -155,16 +156,18 @@
  :get-history
  (fn get-history [{db :db} _]
    (let [server (:server db)
-         credentials (-> db :credentials server)]
+         credentials (-> db :credentials server)
+         admin? (:user/isAdmin (subs/current-user db))
+         formatted (api/get-request {:server server
+                                     :api "purchases"
+                                     :params credentials
+                                     :on-success [:got-history]})
+         raw (api/get-request {:server server
+                               :api "csv-history"
+                               :params credentials
+                               :on-success [:got-csv-history]})]
      (when credentials
-       {:http-xhrio [(api/get-request {:server server
-                                       :api "purchases"
-                                       :params credentials
-                                       :on-success [:got-history]})
-                     (api/get-request {:server server
-                                       :api "csv-history"
-                                       :params credentials
-                                       :on-success [:got-csv-history]})]}))))
+       {:http-xhrio (if admin? [formatted raw] [formatted])}))))
 
 (re-frame/reg-event-db
  :got-history

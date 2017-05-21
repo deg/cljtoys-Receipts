@@ -4,6 +4,7 @@
 (ns receipts-server.interceptors
   (:require
    [clojure.instant :as instant]
+   [datomic.api :as d]
    [io.pedestal.interceptor :as i]
    [io.pedestal.interceptor.chain :as chain]
    [io.pedestal.log :as log])
@@ -127,17 +128,54 @@
                                  :user/token (encrypted->token (:user/password user))}})
                      (terminate-with-error context 401 {:error "Login failed"}))))))}))
 
-(def auth-user-id
+(defn credentials [context]
+  (let [request (:request context)
+        {:keys [db request-method params json-params]} request
+        get? (= request-method :get)
+        email (if get? (:email params) (-> json-params :credentials :email))
+        token (if get? (:token params) (-> json-params :credentials :token))]
+    [email token]))
+
+(def authorization-query
+  '[:find ?password ?authorized
+    :in $ ?email ?level
+    :where
+    [?e :user/email ?email]
+    [?e :user/password ?password]
+    [?e ?level ?authorized]])
+
+(defn authorize
+  "Authorize access to restricted data, at level :user/isEditor or :user/isAdmin"
+  [context level]
+  (let [[email token] (credentials context)
+        db (get-in context [:request :db])
+        [stored-password authorized] (when email
+                                       (first
+                                        (d/q authorization-query db email level)))]
+    (if (and authorized
+             stored-password
+             (= token (encrypted->token stored-password)))
+      context
+      (terminate-with-error context 401 {:error "User not authorized"}))))
+
+(def auth-editor
   (i/interceptor
-   {:name ::auth-user
-    :enter (fn [context]
-             (let [request (:request context)
-                   {:keys [request-method params json-params]} request
-                   get? (= request-method :get)
-                   params (if (= request-method :get) params json-params)
-                   email (if get? (:email params) (-> json-params :credentials :email))
-                   token (if get? (:token params) (-> json-params :credentials :token))]
-               (if token ;; [TODO] Check token against DB (!!!)
-                 context
-                 (terminate-with-error context 401 {:error "User not authorized"}))))}))
+   {:name ::auth-editor
+    :enter (fn [context] (authorize context :user/isEditor))}))
+
+(def auth-admin
+  (i/interceptor
+   {:name ::auth-admin
+    :enter (fn [context] (authorize context :user/isAdmin))}))
+
+(def filter-users
+  (i/interceptor
+   {:name ::filter-users
+    :leave (fn [context]
+             (let [[email _] (credentials context)]
+               (update-in context [:response :body]
+                          (fn [users]
+                            (filter #(or (:user/isConsumer %)
+                                         (= email (:user/email %)))
+                                    users)))))}))
 

@@ -95,6 +95,7 @@
 ;;  (reset! servlet nil))
 
 
+;;; [TODO] Temp hack, until I learn more tooling
 (defn reload []
   (require 'receipts-server.render :reload-all)
   (require 'receipts-server.interceptors :reload-all)

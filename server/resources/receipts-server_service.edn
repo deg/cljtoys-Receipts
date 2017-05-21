@@ -103,7 +103,8 @@
                      :where [?e :user/email ?email]]}]}
 
      "/users"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
+            receipts-server.interceptors/filter-users
             #vase/intercept
              {:name :receipts-server.v1/users-get-intercept1
               :leave (-> :user/password
@@ -115,7 +116,7 @@
                      :where [?e :user/name]]}]}
 
      "/user"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-admin
             #vase/query
             {:name :receipts-server.v1/user-get
              :params [[email "n/a"] [name "n/a"] [abbrev "n/a"]]
@@ -130,7 +131,7 @@
                                     [(.toLowerCase ^String ?name) ?lowerCaseName]
                                     [(.toLowerCase ^String ?originalName) ?lowerCaseName])
                                [?e :user/abbrev ?abbrev])]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-admin
             #vase/intercept
              {:name :receipts-server.v1/user-post-intercept1
               :enter (-> :user/password
@@ -149,21 +150,21 @@
                            :user/isConsumer]}]}
 
      "/categories"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/categories-get
              :query [:find [(pull ?e [*]) ...]
                      :where [?e :category/name]]}]}
 
      "/category"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/category-get
              :params [name]
              :query  [:find [(pull ?e [*]) ...]
                       :in $ ?name
                       :where [?e :category/name ?name]]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-editor
              #vase/transact
              {:name :receipts-server.v1/category-create
               :properties [:db/id
@@ -172,20 +173,20 @@
                            :category/description]}]}
 
      "/vendors"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/vendors-get
              :query [:find [(pull ?e [*]) ...]
                      :where [?e :vendor/name]]}]}
 
      "/vendor"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/vendor-get
              :params [name]
              :query  [:find [(pull ?e [*]) ...]
                       :in $ ?name :where [?e :vendor/name ?name]]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-editor
              #vase/transact
              {:name :receipts-server.v1/vendor-create
               :properties [:db/id
@@ -195,14 +196,14 @@
                            :vendor/category]}]}
 
      "/paymentMethods"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/paymentMethods-get
              :query [:find  [(pull ?e [*]) ...]
                      :where [?e :paymentMethod/name]]}]}
 
      "/paymentMethod"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/paymentMethod-get
              :params [name]
@@ -210,7 +211,7 @@
                      :in $ ?name
                      :where
                      [?e :paymentMethod/name ?name]]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-editor
              #vase/transact
              {:name :receipts-server.v1/paymentMethod-create
               :properties [:db/id
@@ -219,14 +220,14 @@
                            :paymentMethod/abbrev]}]}
 
      "/currencies"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/currencies-get
              :query [:find [(pull ?e [*]) ...]
                      :where [?e :currency/name]]}]}
 
      "/currency"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/currency-get
              :params [[name "n/a"] [abbrev "n/a"]]
@@ -236,7 +237,7 @@
                      (or-join [?e ?name ?abbrev]
                               [?e :currency/name ?name]
                               [?e :currency/abbrev ?abbrev])]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-editor
              #vase/transact
              {:name :receipts-server.v1/currency-create
               :properties [:db/id
@@ -245,7 +246,7 @@
                            :currency/abbrev]}]}
 
      "/purchases"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/purchases-get
              :query [:find [(pull ?e [*]) ...]
@@ -266,7 +267,7 @@
                      :where [?purchases :purchase/uid]]}]}
 
      "/csv-history"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-admin
             #vase/intercept
             {:name :receipts-server.v1/cvs-history-get-intercept
              :leave (fn [context]
@@ -279,7 +280,7 @@
                      :where [?e :purchase/uid]]}]}
 
      "/purchase"
-     {:get [receipts-server.interceptors/auth-user-id
+     {:get [receipts-server.interceptors/auth-editor
             #vase/query
             {:name :receipts-server.v1/purchase-get
              :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
@@ -300,7 +301,7 @@
                               [?e :purchase/date ?date]
                               [?e :purchase/comment ?comment]
                               [?e :purchase/forWhom ?forWhom])]}]
-      :post [receipts-server.interceptors/auth-user-id
+      :post [receipts-server.interceptors/auth-editor
              #vase/intercept
              {:name :receipts-server.v1/purchase-post-intercept1
               :enter (-> :purchase/date
