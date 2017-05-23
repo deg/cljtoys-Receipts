@@ -17,6 +17,14 @@
 
 ;; home
 
+(def tight-gap "0.2rem")
+(def std-gap "0.5rem")
+(def title-gap "0.5rem")
+(def title-width "7em")
+(def tiny-field-width "5rem")
+(def tight-field-width "11rem")
+(def field-width "14rem")
+
 (defn app-title []
   (let [name (re-frame/subscribe [:name])
         server (re-frame/subscribe [:server])]
@@ -49,10 +57,10 @@
   (fn [label error component]
     [re-com/h-box
      :width "100%"
-     :gap "1rem"
+     :gap std-gap
      :children [[re-com/label
                  :class (if error "errmsg" "")
-                 :width "8rem"
+                 :width title-width
                  :label (str label (if (str/blank? label) "" ": "))]
                 [re-com/v-box :children [component
                                          (when error
@@ -78,7 +86,7 @@
         date-atom (reagent/atom date)
         time-atom (reagent/atom time)]
     [re-com/h-box
-     :gap "0.2rem"
+     :gap tight-gap
      :align :center
      :children [(when show-multi-year?
                   [re-com/button
@@ -116,7 +124,7 @@
   (let [current-receipt (re-frame/subscribe [:current-receipt])
         schema (re-frame/subscribe [subs-key])]
     [(if multiple? re-com/selection-list re-com/single-dropdown)
-     :width "15rem"
+     :width field-width
      :model ((if multiple? (partial into #{}) identity)
              (field-key @current-receipt))
      :choices (sort-by :label (mapv (fn [{id schema-id-key
@@ -133,17 +141,17 @@
         password (reagent/atom "")]
     (fn []
       [re-com/v-box
-       :gap "0.5rem"
+       :gap title-gap
        :children [(panel-title "Login")
                   [labelled "Email" nil
                    [re-com/input-text
-                    :width "15rem"
+                    :width field-width
                     :model email
                     :on-change #(reset! email %)
                     :attr {:type "Email"}]]
                   [labelled "Password" nil
                    [re-com/input-text
-                    :width "15rem"
+                    :width field-width
                     :model password
                     :on-change #(reset! password %)
                     :attr {:type "Password"}]]
@@ -172,7 +180,7 @@
     (fn []
       (let [validation-errors (first (validate-receipt @current-receipt))]
         [re-com/v-box
-         :gap "0.2rem"
+         :gap tight-gap
          :children
          [[labelled "Paid by"
            (:purchase/paymentMethod validation-errors)
@@ -188,7 +196,7 @@
           [labelled "Price"
            (:purchase/price validation-errors)
            [re-com/input-text
-            :width "15rem"
+            :width field-width
             :model (or (:purchase/price @current-receipt) "0.00")
             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
             :attr {:type "number"
@@ -209,7 +217,7 @@
           [labelled "Comment"
            (:purchase/comment validation-errors)
            [re-com/input-text
-            :width "15rem"
+            :width field-width
             :model (or (:purchase/comment @current-receipt) "")
             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
             :attr {:type "text"}]]
@@ -221,7 +229,7 @@
             :filter-fn :user/isConsumer
             :schema-label-key :user/name
             :schema-id-key :user/abbrev]]
-          [re-com/gap :size "0.5rem"]
+          [re-com/gap :size std-gap]
           [re-com/h-box
            :children
            [[re-com/button
@@ -234,7 +242,7 @@
     (fn []
       (if (:user/isEditor @user)
         [re-com/v-box
-         :gap "1rem"
+         :gap title-gap
          :children [(panel-title "New Receipt")
                     [receipt-page]]]
         [login-panel]))))
@@ -246,31 +254,31 @@
                         (-> @new-user :permissions :user/isEditor))
             consumer? (-> @new-user :permissions :user/isConsumer)]
         [re-com/v-box
-         :gap "0.5rem"
+         :gap std-gap
          :children [[labelled "Name" nil
                      [re-com/input-text
-                      :width "15rem"
+                      :width field-width
                       :model (or (:name @new-user) "")
                       :on-change #(swap! new-user assoc :name %)
                       :attr {:type "text"}]]
                     (when editor?
                       [labelled "Password" nil
                        [re-com/input-text
-                        :width "15rem"
+                        :width field-width
                         :model (or (:password @new-user) "")
                         :on-change #(swap! new-user assoc :password %)
                         :attr {:type "password"}]])
                     (when consumer?
                       [labelled "Abbrev" nil
                        [re-com/input-text
-                        :width "15rem"
+                        :width field-width
                         :model (or (:abbrev @new-user) "")
                         :on-change #(swap! new-user assoc :abbrev %)
                         :attr {:type "text"}]])
                     (when editor?
                       [labelled "Email" nil
                        [re-com/input-text
-                        :width "15rem"
+                        :width field-width
                         :model (or (:email @new-user) "")
                         :on-change #(swap! new-user assoc :email %)
                         :attr {:type "Email"}]])
@@ -297,10 +305,10 @@
         vendor (reagent/atom "")]
     (fn []
       [re-com/v-box
-       :gap "0.5rem"
+       :gap std-gap
        :children [[labelled "Category" nil
                    [re-com/single-dropdown
-                    :width "12rem"
+                    :width field-width
                     :choices categories
                     :id-fn :db/id
                     :label-fn :category/name
@@ -310,7 +318,7 @@
                    [re-com/input-text
                     :model vendor
                     :on-change #(reset! vendor %)
-                    :width "12rem"]]
+                    :width field-width]]
                   [button #(do (re-frame/dispatch [:add-vendor @category @vendor])
                                (reset! vendor ""))
                    "Add Vendor" "Create a new vendor"]]])))
@@ -329,16 +337,16 @@
       (if @user
         (let [admin? (:user/isAdmin @user)]
           [re-com/v-box
-           :gap "1rem"
+           :gap title-gap
            :children [[panel-title "Schema Editor"]
-                      [labelled "Schema change" nil
+                      [labelled "Action" nil
                        [re-com/h-box
-                        :gap "0.5rem"
-                        :children [[re-com/single-dropdown :width  "5rem"
+                        :gap std-gap
+                        :children [[re-com/single-dropdown :width tiny-field-width
                                     :choices actions
                                     :model action
                                     :on-change #(reset! action %)]
-                                   [re-com/single-dropdown :width "11rem"
+                                   [re-com/single-dropdown :width tight-field-width
                                     :choices entities
                                     :model entity
                                     :on-change #(reset! entity %)]]]]
@@ -358,7 +366,7 @@
   (let [about-server (re-frame/subscribe [:about-server])]
     (fn []
       [re-com/v-box
-       :gap "1rem"
+       :gap title-gap
        :children [(panel-title "About")
                   [:div
                    [:p "Third iteration of a simple receipts management program."]
@@ -436,9 +444,11 @@
               editor? (:user/isEditor @user)
               admin? (:user/isAdmin @user)]
           [re-com/v-box
-           :gap "1rem"
+           :gap title-gap
            :children [(panel-title "History")
-                      [history-table @history]
+                      [re-com/scroller
+                       :scroll :auto
+                       :child [history-table @history]]
                       (when admin?
                         [history-csv @csv])
                       [re-com/h-box
@@ -467,28 +477,28 @@
             editor? (:user/isEditor @user)
             admin? (:user/isAdmin @user)]
         [re-com/v-box
-         :gap "1rem"
+         :gap title-gap
          :children [(panel-title "Setup")
                     [re-com/h-box
-                     :gap "1rem"
+                     :gap std-gap
                      :children [[:span (str "Logged in as " (or email "[UNKNOWN USER]"))]
                                 [button [:logout] "Logout" "Logout from server"]]]
                     (section-title "Developer tools")
                     (if admin?
                       [re-com/h-box
-                                  :gap "1rem"
-                                  :children [[re-com/v-box
-                                              :children [[re-com/label :label "Server cold init:"]
-                                                         (button [:preload-base]
-                                                                 "Preload database"
-                                                                 "Install initial DB (you should not need this)")]]
-                                             [re-com/v-box
-                                              :children [[re-com/label :label "Choose server:"]
-                                                         [re-com/single-dropdown :choices [{:id :production :label "production"}
-                                                                                           {:id :development :label "development"}]
-                                                          :width "12rem"
-                                                          :model @server
-                                                          :on-change #(re-frame/dispatch [:set-server %])]]]]]
+                       :gap std-gap
+                       :children [[re-com/v-box
+                                   :children [[re-com/label :label "Server cold init:"]
+                                              (button [:preload-base]
+                                                      "Preload database"
+                                                      "Install initial DB (you should not need this)")]]
+                                  [re-com/v-box
+                                   :children [[re-com/label :label "Choose server:"]
+                                              [re-com/single-dropdown :choices [{:id :production :label "production"}
+                                                                                {:id :development :label "development"}]
+                                               :width tight-field-width
+                                               :model @server
+                                               :on-change #(re-frame/dispatch [:set-server %])]]]]]
                       [unavailable])
                     (section-title "Schema")
                     (re-com/checkbox
@@ -509,11 +519,11 @@
 
 (defn wrap-page [page]
   [re-com/border
-   :width "90vw"
+   :width "98vw"
    :margin "1vmin"
    :border "0.2vmin solid lightgrey"
-   :padding "1rem"
-   :child page])
+   :padding "2vmin"
+   :child [re-com/scroller :scroll :auto :child page]])
 
 (def tabs [{:id :home    :label "receipt"   :panel (wrap-page [home-panel])}
            {:id :edit    :label "edit"      :panel (wrap-page [edit-panel])}
