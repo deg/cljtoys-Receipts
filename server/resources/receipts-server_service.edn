@@ -23,7 +23,7 @@
       [:user/abbrev            :one  :string :identity "Brief user name for Excel"]
       [:user/name              :one  :string :unique   "User name"]
       [:user/email             :one  :string :unique   "User email"]
-      [:user/password          :one  :string           "Password"]
+      [:user/passwordEncrypted :one  :string           "Password"]
       [:user/isAdmin           :one  :boolean          "User has full access"]
       [:user/isEditor          :one  :boolean          "User can add entries"]
       [:user/isConsumer        :one  :boolean          "User can be listed as purchaser"]
@@ -45,14 +45,14 @@
       [:purchase/forWhom       :many :string           "For whom purchased"]]]}
    :receipts/data
    {:vase.norm/txes
-    [[{:db/ident        :admin-account
-       :user/abbrev     "Admin"
-       :user/name       "Administrator"
-       :user/email      "admin@degel.com"
-       :user/password   "USHkw329MVp8OgUm5hgJew==" ;; encrypt of, umm, (MAYNARD (ROOT 1654))
-       :user/isAdmin    true
-       :user/isEditor   true
-       :user/isConsumer false}]]}}
+    [[{:db/ident               :admin-account
+       :user/abbrev            "Admin"
+       :user/name              "Administrator"
+       :user/email             "admin@degel.com"
+       :user/passwordEncrypted "USHkw329MVp8OgUm5hgJew==" ;; encrypt of, umm, (MAYNARD (ROOT 1654))
+       :user/isAdmin           true
+       :user/isEditor          true
+       :user/isConsumer        false}]]}}
 
 
   ;; Global Specs for the API
@@ -105,11 +105,11 @@
      "/users"
      {:get [receipts-server.interceptors/auth-editor
             receipts-server.interceptors/filter-users
-            #vase/intercept
-             {:name :receipts-server.v1/users-get-intercept1
-              :leave (-> :user/password
-                         receipts-server.interceptors/shroud-updater
-                         receipts-server.interceptors/body-updater)}
+            ;; #vase/intercept
+            ;;  {:name :receipts-server.v1/users-get-intercept1
+            ;;   :leave (-> {:in :user/passwordEncrypted :out :user/password}
+            ;;              receipts-server.interceptors/shroud-updater
+            ;;              receipts-server.interceptors/body-updater)}
             #vase/query
             {:name :receipts-server.v1/users-get
              :query [:find [(pull ?e [*]) ...]
@@ -134,7 +134,7 @@
       :post [receipts-server.interceptors/auth-admin
             #vase/intercept
              {:name :receipts-server.v1/user-post-intercept1
-              :enter (-> :user/password
+              :enter (-> {:in :user/password :out :user/passwordEncrypted}
                          receipts-server.interceptors/encrypt-updater
                          receipts-server.interceptors/payload-updater)}
              #vase/transact
@@ -142,7 +142,7 @@
               :properties [:db/id
                            :receipts/dynamic?
                            :user/name
-                           :user/password
+                           :user/passwordEncrypted
                            :user/abbrev
                            :user/email
                            :user/isAdmin

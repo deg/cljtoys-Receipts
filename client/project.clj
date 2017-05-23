@@ -1,5 +1,5 @@
 (defproject receipts-client "0.1.0-SNAPSHOT"
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/clojurescript "1.9.542"]
                  [reagent "0.6.2"]
                  [re-frame "0.9.3"]

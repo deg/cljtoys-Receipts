@@ -108,8 +108,21 @@
  :preload-base
   (fn preload-base [{db :db} _]
     {:http-xhrio (preload/initial-data
-                  (:server db) (-> db :credentials ((:server db))))
-     :db  (assoc db :loading? true)}))
+                  (:server db) (-> db :credentials ((:server db))))}))
+
+(defn entity-type [entity]
+  (-> entity ffirst namespace))
+
+(re-frame/reg-event-fx
+ :load-entities
+ (fn load-entities [{db :db} [_ entities]]
+   (let [api-groups (group-by entity-type entities)]
+     {:http-xhrio (mapv (fn [[api api-entities]]
+                          ;; [TODO] post-multi-request can be replaced by simpler code. Do after killing preload stuff
+                          (let [handler (preload/post-multi-request api identity)]
+                            (first (handler (:server db) (-> db :credentials ((:server db)))
+                                            api-entities))))
+                        api-groups)})))
 
 (re-frame/reg-event-fx
  :get-schema

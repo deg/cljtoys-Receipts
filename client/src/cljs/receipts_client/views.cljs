@@ -3,6 +3,7 @@
 
 (ns receipts-client.views
   (:require
+   [cljs.tools.reader :as reader]
    [cljs-time.coerce :as time-coerce]
    [cljs-time.core :as time]
    [cljs-time.format :as time-format]
@@ -323,14 +324,15 @@
                                (reset! vendor ""))
                    "Add Vendor" "Create a new vendor"]]])))
 
+(def entity-names [{:id :user :label "User"}
+                   {:id :payment-method :label "Payment Method"}
+                   {:id :category :label "Category"}
+                   {:id :vendor :label "vendor"}])
+
 (defn edit-panel []
   (let [user (re-frame/subscribe [:user])
         actions [{:id :add :label "Add"}
                  {:id :edit :label "Edit"}]
-        entities [{:id :user :label "User"}
-                  {:id :payment-method :label "Payment Method"}
-                  {:id :category :label "Category"}
-                  {:id :vendor :label "vendor"}]
         action (reagent/atom :add)
         entity (reagent/atom :vendor)]
     (fn []
@@ -347,11 +349,11 @@
                                     :model action
                                     :on-change #(reset! action %)]
                                    [re-com/single-dropdown :width tight-field-width
-                                    :choices entities
+                                    :choices entity-names
                                     :model entity
                                     :on-change #(reset! entity %)]]]]
                       [panel-subtitle (str (utils/get-at actions :id @action :label) " "
-                                           (utils/get-at entities :id @entity :label))]
+                                           (utils/get-at entity-names :id @entity :label))]
                       (case @action
                         :add (case @entity
                                :user (if admin? [add-user] [unavailable])
@@ -372,7 +374,7 @@
                    [:p "Third iteration of a simple receipts management program."]
                    [:p "This time, my focus is on learning Vase, Datomic, and Pedestal."]
                    [:h4 "Status"]
-                   [:p (goog.string/format "Currently holding %d purchases." (:purchases-count @about-server))]
+                   [:p (goog.string/format "Currently holding %d purchases." (or (:purchases-count @about-server) 0))]
                    [:h4 (goog.string/format "Version %s" (:version @about-server))]
                    [:h5 "Includes libraries:"]
                    [:small
@@ -470,7 +472,8 @@
   (let [server (re-frame/subscribe [:server])
         user (re-frame/subscribe [:user])
         schema (re-frame/subscribe [:schema])
-        verbose? (reagent/atom false)]
+        verbose? (reagent/atom false)
+        entities (reagent/atom "")]
     (fn []
       (let [email (:user/email @user)
             consumer? (:user/isConsumer @user)
@@ -484,22 +487,33 @@
                      :children [[:span (str "Logged in as " (or email "[UNKNOWN USER]"))]
                                 [button [:logout] "Logout" "Logout from server"]]]
                     (section-title "Developer tools")
-                    (if admin?
-                      [re-com/h-box
-                       :gap std-gap
-                       :children [[re-com/v-box
-                                   :children [[re-com/label :label "Server cold init:"]
-                                              (button [:preload-base]
-                                                      "Preload database"
-                                                      "Install initial DB (you should not need this)")]]
-                                  [re-com/v-box
-                                   :children [[re-com/label :label "Choose server:"]
-                                              [re-com/single-dropdown :choices [{:id :production :label "production"}
-                                                                                {:id :development :label "development"}]
-                                               :width tight-field-width
-                                               :model @server
-                                               :on-change #(re-frame/dispatch [:set-server %])]]]]]
+                    (when-not admin?
                       [unavailable])
+                    (when admin?
+                      [labelled "Choose server" nil
+                       [re-com/single-dropdown
+                        :choices [{:id :production :label "production"}
+                                  {:id :development :label "development"}]
+                        :width tight-field-width
+                        :model @server
+                        :on-change #(re-frame/dispatch [:set-server %])]])
+                    (when admin?
+                      [labelled "Cold init" nil
+                       (button [:preload-base]
+                               "Preload database"
+                               "Install initial DB (you should not need this)")])
+                    (when admin?
+                      [re-com/h-box
+                       :align :end
+                       :gap std-gap
+                       :children [[re-com/input-textarea
+                                   :model entities
+                                   :on-change #(reset! entities %)
+                                   :width "80%"
+                                   :rows 5]
+                                  (button [:load-entities (reader/read-string (str "[" @entities "]"))]
+                                          "Load entities"
+                                          "Add objects, e.g. saved from a previous database instantiation")]])
                     (section-title "Schema")
                     (re-com/checkbox
                      :model verbose?

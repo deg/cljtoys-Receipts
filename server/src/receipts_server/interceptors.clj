@@ -12,11 +12,28 @@
            [javax.crypto.spec SecretKeySpec]
            [java.util Base64]))
 
-(defn update-field [f field payloads]
+(defn update-one-field
+  "Payloads is a collection of maps. In each map, update field with fcn."
+  [fcn field payloads]
   (map #(if (field %)
-          (update % field f)
+          (update % field fcn)
           %)
        payloads))
+
+(defn update-field-to-field
+  "Payloads is a collection of maps. In each map, assoc outfield with fcn of in-field.
+  That is (update-field-to-field #(* 3 %) :in :out [{:in 1} {:in 2}]) => [{:out 3} {:out 6}]"
+  [fcn in-field out-field payloads]
+  (map #(if (in-field %)
+          (dissoc (assoc % out-field (-> % in-field fcn))
+                  in-field)
+          %)
+       payloads))
+
+(defn update-field [fcn field-or-fields payload]
+  (if (map? field-or-fields)
+    (update-field-to-field fcn (:in field-or-fields) (:out field-or-fields) payload)
+    (update-one-field fcn field-or-fields payload)))
 
 (defn payload-updater [updater]
   (fn [context]
@@ -97,6 +114,7 @@
 ;;; I'm uncomfortable about releasing the stored encrypted passwords into the wild. So,
 ;;; for an added bit of obscurity release as "tokens" after an additional round of
 ;;; encryption.  Barf?
+;;; Re-examine this once we have client-side encryption working.
 
 (defn password->token [password]
   (-> password encrypt encrypt))
@@ -118,14 +136,14 @@
                (if (next body)
                  (terminate-with-error context 500 {:error (str "Duplicated email: " body)})
                  (let [user (first body)
-                       old-encrypted (:user/password user)
+                       old-encrypted (:user/passwordEncrypted user)
                        encrypted (encrypt (get-in context [:request :params :password]))
                        editor? (:user/isEditor user)]
                    (if (and editor? (= encrypted old-encrypted))
                      (assoc-in context [:response :body]
                                {:user/credentials
                                 {:user/email (:user/email user)
-                                 :user/token (encrypted->token (:user/password user))}})
+                                 :user/token (encrypted->token (:user/passwordEncrypted user))}})
                      (terminate-with-error context 401 {:error "Login failed"}))))))}))
 
 (defn credentials [context]
@@ -137,11 +155,11 @@
     [email token]))
 
 (def authorization-query
-  '[:find ?password ?authorized
+  '[:find ?passwordEncrypted ?authorized
     :in $ ?email ?level
     :where
     [?e :user/email ?email]
-    [?e :user/password ?password]
+    [?e :user/passwordEncrypted ?passwordEncrypted]
     [?e ?level ?authorized]])
 
 (defn authorize
@@ -149,12 +167,12 @@
   [context level]
   (let [[email token] (credentials context)
         db (get-in context [:request :db])
-        [stored-password authorized] (when email
+        [stored-encrypted-password authorized] (when email
                                        (first
                                         (d/q authorization-query db email level)))]
     (if (and authorized
-             stored-password
-             (= token (encrypted->token stored-password)))
+             stored-encrypted-password
+             (= token (encrypted->token stored-encrypted-password)))
       context
       (terminate-with-error context 401 {:error "User not authorized"}))))
 
