@@ -5,7 +5,7 @@
   (:require  [ajax.core :as ajax]
              [cljs-time.core :as time]
              [cljs-time.coerce :as time-coerce]
-             [com.smxemail.re-frame-cookie-fx]
+             [com.degel.re-frame.storage]
              [day8.re-frame.http-fx]
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
@@ -57,52 +57,33 @@
                                            :user/password password}
                                   :on-success [:got-login]})}))
 
-;;; [TODO] Should really use local-storage, rather than cookies, since we are only using
-;;; this locally. This will mean spending a few minutes remembering the local-storage
-;;; API and wrapping it in an fx.
-;;; (Remember that our API server is not at the same domain as our web
-;;; server, so we can't send cookies with the API requests. If we could this could be a
-;;; bit simpler -- we would not have to explicitly add credentials into each API request).
-
-(def cookie-lifetime (* 60 60 24 365)) ;; One year, in seconds
-(def email-cookie "email")
-(def token-cookie "token")
-
 (re-frame/reg-event-fx
  :got-login
  (fn got-login [{db :db} [_ {credentials :user/credentials}]]
    (let [server (:server db)
          email (:user/email credentials)
          token (:user/token credentials)]
-     {:cookie/set [{:name email-cookie :value email :max-age cookie-lifetime}
-                   {:name token-cookie :value token :max-age cookie-lifetime}]
+     {:storage/set {:pairs [{:name :email :value email}
+                            {:name :token :value token}]}
       :dispatch-later [{:ms 100 :dispatch [:update-credentials]}]})))
-
-(defn cookie-noop [db _]
-  db)
-
-(re-frame/reg-event-db :cookie-set-no-on-success cookie-noop)
-(re-frame/reg-event-db :cookie-set-no-on-failure cookie-noop)
-
-(re-frame/reg-event-db :cookie-remove-no-on-success cookie-noop)
-(re-frame/reg-event-db :cookie-remove-no-on-failure cookie-noop)
 
 
 (re-frame/reg-event-fx
  :logout
  (fn logout [{db :db} _]
    {:db (dissoc db :credentials :schema)
-    :cookie/remove [{:name email-cookie}
-                    {:name token-cookie}]}))
+    :storage/remove {:names [:email :token]}}))
+
 
 (re-frame/reg-event-fx
  :update-credentials
- [(re-frame/inject-cofx :cookie/get [email-cookie token-cookie])]
- (fn update-credentials [{db :db {:keys [email token]} :cookie/get}]
-   {:db (-> db
+ [(re-frame/inject-cofx :storage/get {:names [:email :token]})]
+ (fn update-credentials [{db :db {:keys [email token]} :storage/get}]
+   (when token
+     {:db (-> db
               (assoc-in [:credentials (:server db) :user/email] email)
               (assoc-in [:credentials (:server db) :user/token] token))
-    :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]}))
+      :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]})))
 
 (re-frame/reg-event-fx
  :preload-base

@@ -15,7 +15,8 @@
                  [funcool/struct "1.0.0"]
 
                  ;; Cookie support
-                 [com.smxemail/re-frame-cookie-fx "0.0.2"]]
+                 [com.smxemail/re-frame-cookie-fx "0.0.3-SNAPSHOT"]
+                 [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]
