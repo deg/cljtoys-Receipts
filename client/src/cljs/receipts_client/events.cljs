@@ -10,7 +10,6 @@
              [re-frame.core :as re-frame]
              [receipts-client.api-client :as api]
              [receipts-client.db :as db]
-             [receipts-client.preload :as preload]
              [receipts-client.routes :as routes]
              [receipts-client.subs :as subs]
              [receipts-client.utils :as utils]))
@@ -85,24 +84,27 @@
               (assoc-in [:credentials (:server db) :user/token] token))
       :dispatch-later [{:ms 500 :dispatch [:get-schema :all]}]})))
 
-(re-frame/reg-event-fx
- :preload-base
-  (fn preload-base [{db :db} _]
-    {:http-xhrio (preload/initial-data
-                  (:server db) (-> db :credentials ((:server db))))}))
-
-(defn entity-type [entity]
+(defn entity-type
+  "This is a bit hackish. It depends on each key in an entity map being in a
+   namespace named the same as the api call"
+  [entity]
   (-> entity ffirst namespace))
+
+(defn multi-post-request [db api requests]
+  (let [server (:server db)
+        credentials (get-in db [:credentials server])]
+    (api/post-request {:server server
+                       :api api
+                       :params {:credentials credentials
+                                :payload (mapv api/string-keyed requests)}
+                       :on-success [:get-schema api]})))
 
 (re-frame/reg-event-fx
  :load-entities
  (fn load-entities [{db :db} [_ entities]]
    (let [api-groups (group-by entity-type entities)]
      {:http-xhrio (mapv (fn [[api api-entities]]
-                          ;; [TODO] post-multi-request can be replaced by simpler code. Do after killing preload stuff
-                          (let [handler (preload/post-multi-request api identity)]
-                            (first (handler (:server db) (-> db :credentials ((:server db)))
-                                            api-entities))))
+                          (multi-post-request db api api-entities))
                         api-groups)})))
 
 (re-frame/reg-event-fx

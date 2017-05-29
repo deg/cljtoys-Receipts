@@ -498,18 +498,13 @@
                         :model @server
                         :on-change #(re-frame/dispatch [:set-server %])]])
                     (when admin?
-                      [labelled "Cold init" nil
-                       (button [:preload-base]
-                               "Preload database"
-                               "Install initial DB (you should not need this)")])
-                    (when admin?
-                      [re-com/h-box
+                      [re-com/v-box
                        :align :end
                        :gap std-gap
                        :children [[re-com/input-textarea
                                    :model entities
                                    :on-change #(reset! entities %)
-                                   :width "80%"
+                                   :width "100%"
                                    :rows 5]
                                   (button [:load-entities (reader/read-string (str "[" @entities "]"))]
                                           "Load entities"
