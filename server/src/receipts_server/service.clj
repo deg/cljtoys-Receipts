@@ -39,7 +39,7 @@
    ;; ::http/interceptors []
 
    ;; CORS allowed origins
-   ::http/allowed-origins ["http://localhost:3449" "http://lightsail-1.degel.com"]
+   ::http/allowed-origins ["http://localhost:3449" "http://lightsail-1.degel.com" "http://receipts.goldfarb-family.com"]
 
    ::route-set routes
    ::vase/api-root "/api"
