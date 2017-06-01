@@ -197,3 +197,36 @@
                                          (= email (:user/email %)))
                                     users)))))}))
 
+(def count-query
+  '[:find ?match (count ?item)
+    :in $ ?attrib
+    :where [?item ?attrib ?match]])
+
+(defn sort-field [context attrib label-key]
+  (let [db (get-in context [:request :db])
+        name-counts (into {} (d/q count-query db attrib))]
+    (update-in context [:response :body]
+               (fn [body]
+                 (sort-by ;; Sort by usage frequency, then name
+                  (juxt (fn [entry] (-> (label-key entry)
+                                        name-counts
+                                        ;; Flip so highest first. Treat null as 0 (last)
+                                        (#(if % (- %) 0))))
+                        label-key)
+                  body)))))
+
+(def sort-paymentMethods
+  (i/interceptor
+   {:name ::sort-paymentMethods :leave #(sort-field % :purchase/paymentMethod :paymentMethod/name)}))
+
+(def sort-categories
+  (i/interceptor
+   {:name ::sort-categories :leave #(sort-field % :purchase/category :category/name)}))
+
+(def sort-vendors
+  (i/interceptor
+   {:name ::sort-vendors :leave #(sort-field % :purchase/vendor :vendor/name)}))
+
+(def sort-users
+  (i/interceptor
+   {:name ::sort-users :leave #(sort-field % :purchase/forWhom :user/abbrev)}))

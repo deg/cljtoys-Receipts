@@ -128,12 +128,12 @@
      :width field-width
      :model ((if multiple? (partial into #{}) identity)
              (field-key @current-receipt))
-     :choices (sort-by :label (mapv (fn [{id schema-id-key
-                                          label schema-label-key}]
-                                      {:id id :label label})
-                                    (if filter-fn
-                                      (filter filter-fn @schema)
-                                      @schema)))
+     :choices (mapv (fn [{id schema-id-key
+                          label schema-label-key}]
+                      {:id id :label label})
+                    (if filter-fn
+                      (filter filter-fn @schema)
+                      @schema))
      :on-change #(re-frame/dispatch [:edit-current-receipt field-key %])]))
 
 

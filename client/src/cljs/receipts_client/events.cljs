@@ -163,7 +163,8 @@
                                :params credentials
                                :on-success [:got-csv-history]})]
      (when credentials
-       {:http-xhrio (if admin? [formatted raw] [formatted])}))))
+       {:dispatch [:get-schema :all]
+        :http-xhrio (if admin? [formatted raw] [formatted])}))))
 
 (re-frame/reg-event-db
  :got-history
@@ -223,10 +224,11 @@
    (dissoc receipt :purchase/price :purchase/category :purchase/vendor :purchase/forWhom :purchase/comment)
    :purchase/date (time/now)))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  :submitted-receipt
- (fn submitted-receipt [db [_ response]]
-   (update db :current-receipt reset-receipt)))
+ (fn submitted-receipt [{db :db} [_ response]]
+   {:db (update db :current-receipt reset-receipt)
+    :dispatch [:get-schema :all]}))
 
 (re-frame/reg-event-fx
  :add-user
