@@ -188,7 +188,7 @@
            [dropdown :multiple? false
             :field-key :purchase/paymentMethod
             :subs-key :payment-methods
-            :schema-key :paymentMethod/name]]
+            :schema-key :paymentMethod/abbrev]]
           [labelled "Date"
            (:purchase/date validation-errors)
            [date-time-picker

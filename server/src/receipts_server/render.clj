@@ -13,7 +13,7 @@
 
 ;;; Convert series of purchases into a single CSV string suitable, e.g., for MS Excel.
 (defn csv-purchases [purchases]
-  (let [cells (into [["Paid By" "Date" "Amount" "Category" "Vendor" "Comment" "Currency" "For Whom"]]
+  (let [cells (into [["Paid By" "Date" "Amount" "Category" "Vendor" "Comment" "For Whom" "Currency"]]
                     (mapv (fn [{:purchase/keys [paymentMethod date currency price category vendor comment forWhom]}]
                             (vector paymentMethod
                                     (time-format/unparse date-format (time-coerce/to-date-time date))
@@ -21,8 +21,8 @@
                                     category
                                     vendor
                                     (or comment "")
-                                    currency
-                                    (str/join ", " forWhom)))
+                                    (str/join ", " forWhom)
+                                    currency))
                           (sort-by :purchase/date purchases)))]
     (csv/write-csv cells)))
 
