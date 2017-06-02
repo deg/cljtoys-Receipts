@@ -166,6 +166,7 @@
 (def complete-receipt
   {:purchase/paymentMethod [[struct/required :message "'Paid by' missing"] struct/string]
    :purchase/date [[struct/required :message "Please specify date"] struct/positive]
+   :purchase/price [[struct/required :message "Please specify amount"] struct/positive]
    :purchase/category [[struct/required :message  "Category missing"] struct/string]
    :purchase/vendor [[struct/required :message  "Choose vendor in category"] struct/string]
    :purchase/forWhom [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
@@ -188,7 +189,8 @@
            [dropdown :multiple? false
             :field-key :purchase/paymentMethod
             :subs-key :payment-methods
-            :schema-key :paymentMethod/abbrev]]
+            :schema-id-key :paymentMethod/abbrev
+            :schema-label-key :paymentMethod/name]]
           [labelled "Date"
            (:purchase/date validation-errors)
            [date-time-picker
@@ -200,6 +202,7 @@
             :width field-width
             :model (or (:purchase/price @current-receipt) "0.00")
             :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
+            :change-on-blur? false
             :attr {:type "number"
                    :step "0.01"}]]
           [labelled "Category"
