@@ -26,13 +26,17 @@
 (def tight-field-width "11rem")
 (def field-width "14rem")
 
+
+;; Nice sugar from https://lambdaisland.com/blog/11-02-2017-re-frame-form-1-subscriptions
+(def <sub (comp deref re-frame/subscribe))
+(def >evt re-frame/dispatch)
+
 (defn app-title []
-  (let [name (re-frame/subscribe [:name])
-        server (re-frame/subscribe [:server])]
-    (fn []
-      [re-com/title
-       :label (str @name (when (= @server :development) " (local test server)"))
-       :level :level1])))
+  [re-com/title
+   :label (str (<sub [:name])
+               (when (= (<sub [:server]) :development)
+                 " (local test server)"))
+   :level :level1] )
 
 (defn panel-title [label]
   [re-com/title :label label :level :level1])
@@ -51,7 +55,7 @@
    :label label
    :tooltip tooltip
    :on-click #(if (vector? dispatch)
-                (re-frame/dispatch dispatch)
+                (>evt dispatch)
                 (dispatch))])
 
 (defn labelled [label error component]
@@ -122,19 +126,17 @@
       :or {model-key-fn identity
            schema-id-key schema-key
            schema-label-key schema-key}}]
-  (let [current-receipt (re-frame/subscribe [:current-receipt])
-        schema (re-frame/subscribe [subs-key])]
-    [(if multiple? re-com/selection-list re-com/single-dropdown)
-     :width field-width
-     :model ((if multiple? (partial into #{}) identity)
-             (field-key @current-receipt))
-     :choices (mapv (fn [{id schema-id-key
-                          label schema-label-key}]
-                      {:id id :label label})
-                    (if filter-fn
-                      (filter filter-fn @schema)
-                      @schema))
-     :on-change #(re-frame/dispatch [:edit-current-receipt field-key %])]))
+  [(if multiple? re-com/selection-list re-com/single-dropdown)
+   :width field-width
+   :model ((if multiple? (partial into #{}) identity)
+           (field-key (<sub [:current-receipt])))
+   :choices (mapv (fn [{id schema-id-key
+                        label schema-label-key}]
+                    {:id id :label label})
+                  (if filter-fn
+                    (filter filter-fn (<sub [subs-key]))
+                    (<sub [subs-key])))
+   :on-change #(>evt [:edit-current-receipt field-key %])])
 
 
 (defn login-panel []
@@ -178,78 +180,75 @@
   (struct/valid? receipt complete-receipt))
 
 (defn receipt-page []
-  (let [current-receipt (re-frame/subscribe [:current-receipt])]
-    (fn []
-      (let [validation-errors (first (validate-receipt @current-receipt))]
-        [re-com/v-box
-         :gap tight-gap
-         :children
-         [[labelled "Paid by"
-           (:purchase/paymentMethod validation-errors)
-           [dropdown :multiple? false
-            :field-key :purchase/paymentMethod
-            :subs-key :payment-methods
-            :schema-id-key :paymentMethod/abbrev
-            :schema-label-key :paymentMethod/name]]
-          [labelled "Date"
-           (:purchase/date validation-errors)
-           [date-time-picker
-            :model (or (:purchase/date @current-receipt) (time/now))
-            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/date %])]]
-          [labelled "Price"
-           (:purchase/price validation-errors)
-           [re-com/input-text
-            :width field-width
-            :model (or (:purchase/price @current-receipt) "0.00")
-            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/price %])
-            :change-on-blur? false
-            :attr {:type "number"
-                   :step "0.01"}]]
-          [labelled "Category"
-           (:purchase/category validation-errors)
-           [dropdown :multiple? false
-            :field-key :purchase/category
-            :subs-key :categories
-            :schema-key :category/name]]
-          [labelled "Vendor"
-           (:purchase/vendor validation-errors)
-           [dropdown :multiple? false
-            :field-key :purchase/vendor
-            :subs-key :vendors
-            :schema-key :vendor/name
-            :filter-fn #(some #{(:purchase/category @current-receipt)} (:vendor/category %))]]
-          [labelled "Comment"
-           (:purchase/comment validation-errors)
-           [re-com/input-text
-            :width field-width
-            :model (or (:purchase/comment @current-receipt) "")
-            :on-change #(re-frame/dispatch [:edit-current-receipt :purchase/comment %])
-            :attr {:type "text"}]]
-          [labelled "For Whom"
-           (:purchase/forWhom validation-errors)
-           [dropdown :multiple? true
-            :field-key :purchase/forWhom
-            :subs-key :users
-            :filter-fn :user/isConsumer
-            :schema-label-key :user/name
-            :schema-id-key :user/abbrev]]
-          [re-com/gap :size std-gap]
-          [re-com/h-box
-           :children
-           [[re-com/button
-             :disabled? (not (valid-receipt? @current-receipt))
-             :on-click #(re-frame/dispatch [:submit-receipt @current-receipt])
-             :label "Submit Receipt"]]]]]))))
+  (let [receipt (<sub [:current-receipt])
+        validation-errors (first (validate-receipt receipt))]
+    [re-com/v-box
+     :gap tight-gap
+     :children
+     [[labelled "Paid by"
+       (:purchase/paymentMethod validation-errors)
+       [dropdown :multiple? false
+        :field-key :purchase/paymentMethod
+        :subs-key :payment-methods
+        :schema-id-key :paymentMethod/abbrev
+        :schema-label-key :paymentMethod/name]]
+      [labelled "Date"
+       (:purchase/date validation-errors)
+       [date-time-picker
+        :model (or (:purchase/date receipt) (time/now))
+        :on-change #(>evt [:edit-current-receipt :purchase/date %])]]
+      [labelled "Price"
+       (:purchase/price validation-errors)
+       [re-com/input-text
+        :width field-width
+        :model (or (:purchase/price receipt) "0.00")
+        :on-change #(>evt [:edit-current-receipt :purchase/price %])
+        :change-on-blur? false
+        :attr {:type "number"
+               :step "0.01"}]]
+      [labelled "Category"
+       (:purchase/category validation-errors)
+       [dropdown :multiple? false
+        :field-key :purchase/category
+        :subs-key :categories
+        :schema-key :category/name]]
+      [labelled "Vendor"
+       (:purchase/vendor validation-errors)
+       [dropdown :multiple? false
+        :field-key :purchase/vendor
+        :subs-key :vendors
+        :schema-key :vendor/name
+        :filter-fn #(some #{(:purchase/category receipt)} (:vendor/category %))]]
+      [labelled "Comment"
+       (:purchase/comment validation-errors)
+       [re-com/input-text
+        :width field-width
+        :model (or (:purchase/comment receipt) "")
+        :on-change #(>evt [:edit-current-receipt :purchase/comment %])
+        :attr {:type "text"}]]
+      [labelled "For Whom"
+       (:purchase/forWhom validation-errors)
+       [dropdown :multiple? true
+        :field-key :purchase/forWhom
+        :subs-key :users
+        :filter-fn :user/isConsumer
+        :schema-label-key :user/name
+        :schema-id-key :user/abbrev]]
+      [re-com/gap :size std-gap]
+      [re-com/h-box
+       :children
+       [[re-com/button
+         :disabled? (not (valid-receipt? receipt))
+         :on-click #(>evt [:submit-receipt receipt])
+         :label "Submit Receipt"]]]]]))
 
 (defn home-panel []
-  (let [user (re-frame/subscribe [:user])]
-    (fn []
-      (if (:user/isEditor @user)
-        [re-com/v-box
-         :gap title-gap
-         :children [(panel-title "New Receipt")
-                    [receipt-page]]]
-        [login-panel]))))
+  (if (:user/isEditor (<sub [:user]))
+    [re-com/v-box
+     :gap title-gap
+     :children [(panel-title "New Receipt")
+                [receipt-page]]]
+    [login-panel]))
 
 (defn add-user []
   (let [new-user (reagent/atom {})]
@@ -293,7 +292,7 @@
                                 {:id :user/isConsumer :label "Consumer"}]
                       :model (or (:permissions @new-user) #{})
                       :on-change #(swap! new-user assoc :permissions %)]]
-                    [button #(do (re-frame/dispatch [:add-user @new-user])
+                    [button #(do (>evt [:add-user @new-user])
                                  (reset! new-user {}))
                      "Add User" "Create a new user"]]]))))
 
@@ -323,7 +322,7 @@
                     :model vendor
                     :on-change #(reset! vendor %)
                     :width field-width]]
-                  [button #(do (re-frame/dispatch [:add-vendor @category @vendor])
+                  [button #(do (>evt [:add-vendor @category @vendor])
                                (reset! vendor ""))
                    "Add Vendor" "Create a new vendor"]]])))
 
@@ -368,27 +367,25 @@
         [login-panel]))))
 
 (defn about-panel []
-  (let [about-server (re-frame/subscribe [:about-server])]
-    (fn []
-      [re-com/v-box
-       :gap title-gap
-       :children [(panel-title "About")
-                  [:div
-                   [:p "Third iteration of a simple receipts management program."]
-                   [:p "This time, my focus is on learning Vase, Datomic, and Pedestal."]
-                   [:h4 "Status"]
-                   [:p (goog.string/format "Currently holding %d purchases." (or (:purchases-count @about-server) 0))]
-                   [:h4 (goog.string/format "Version %s" (:version @about-server))]
-                   [:h5 "Includes libraries:"]
-                   [:small
-                    [:ul
-                     (map (fn [[dependency version]]
-                            ^{:key dependency}[:li (goog.string/format "%s:%s" dependency version)])
-                          (sort-by first (:dependencies @about-server)))]]
-                   [:p
-                    [:em "Copyright (c) 2017, David Goldfarb <deg@degel.com>"]
-                    [:br]
-                    [:em "Portions copyright 2013-2016."]]]]])))
+  [re-com/v-box
+   :gap title-gap
+   :children [(panel-title "About")
+              [:div
+               [:p "Third iteration of a simple receipts management program."]
+               [:p "This time, my focus is on learning Vase, Datomic, and Pedestal."]
+               [:h4 "Status"]
+               [:p (goog.string/format "Currently holding %d purchases." (or (:purchases-count (<sub [:about-server])) 0))]
+               [:h4 (goog.string/format "Version %s" (:version (<sub [:about-server])))]
+               [:h5 "Includes libraries:"]
+               [:small
+                [:ul
+                 (map (fn [[dependency version]]
+                        ^{:key dependency}[:li (goog.string/format "%s:%s" dependency version)])
+                      (sort-by first (:dependencies (<sub [:about-server]))))]]
+               [:p
+                [:em "Copyright (c) 2017, David Goldfarb <deg@degel.com>"]
+                [:br]
+                [:em "Portions copyright 2013-2016."]]]]])
 
 (def date-format (time-format/formatter "ddMMMyy"))
 (def time-format (time-format/formatter "HH:mm:ss"))
@@ -401,7 +398,7 @@
     :price (let [[currency amount] value
                  symbol (case currency
                           "USD" "$"
-                          "EU" "\u20AC"
+                          "EU"  "\u20AC"
                           "GBP" "\u00A3"
                           "NIS" "\u20AA"
                           "?")]
@@ -440,25 +437,21 @@
    :disabled? true])
 
 (defn history-panel []
-  (let [user (re-frame/subscribe [:user])
-        history (re-frame/subscribe [:history])
-        csv (re-frame/subscribe [:history-csv])]
-    (fn []
-      (if @user
-        (let [consumer? (:user/isConsumer @user)
-              editor? (:user/isEditor @user)
-              admin? (:user/isAdmin @user)]
-          [re-com/v-box
-           :gap title-gap
-           :children [(panel-title "History")
-                      [re-com/scroller
-                       :scroll :auto
-                       :child [history-table @history]]
-                      (when admin?
-                        [history-csv @csv])
-                      [re-com/h-box
-                       :children [(button [:get-history] "Refresh History" "Load history from server")]]]])
-        [login-panel]))))
+  (if (<sub [:user])
+    (let [consumer? (:user/isConsumer (<sub [:user]))
+          editor? (:user/isEditor (<sub [:user]))
+          admin? (:user/isAdmin (<sub [:user]))]
+      [re-com/v-box
+       :gap title-gap
+       :children [(panel-title "History")
+                  [re-com/scroller
+                   :scroll :auto
+                   :child [history-table (<sub [:history])]]
+                  (when admin?
+                    [history-csv (<sub [:history-csv])])
+                  [re-com/h-box
+                   :children [(button [:get-history] "Refresh History" "Load history from server")]]]])
+    [login-panel]))
 
 (defn formatted-schema [title schema-part only-dynamic?]
   [re-com/v-box
@@ -472,16 +465,13 @@
                           schema-part))]]])
 
 (defn config-panel []
-  (let [server (re-frame/subscribe [:server])
-        user (re-frame/subscribe [:user])
-        schema (re-frame/subscribe [:schema])
-        verbose? (reagent/atom false)
+  (let [verbose? (reagent/atom false)
         entities (reagent/atom "")]
     (fn []
-      (let [email (:user/email @user)
-            consumer? (:user/isConsumer @user)
-            editor? (:user/isEditor @user)
-            admin? (:user/isAdmin @user)]
+      (let [email (:user/email (<sub [:user]))
+            consumer? (:user/isConsumer (<sub [:user]))
+            editor? (:user/isEditor (<sub [:user]))
+            admin? (:user/isAdmin (<sub [:user]))]
         [re-com/v-box
          :gap title-gap
          :children [(panel-title "Setup")
@@ -498,8 +488,8 @@
                         :choices [{:id :production :label "production"}
                                   {:id :development :label "development"}]
                         :width tight-field-width
-                        :model @server
-                        :on-change #(re-frame/dispatch [:set-server %])]])
+                        :model (<sub [:server])
+                        :on-change #(>evt [:set-server %])]])
                     (when admin?
                       [re-com/v-box
                        :align :end
@@ -518,16 +508,17 @@
                      :on-change #(reset! verbose? %)
                      :label "Show all?")
                     (when admin?
-                      (formatted-schema "Users" (:users @schema) (not @verbose?)))
-                    (formatted-schema "Payment Methods" (:payment-methods @schema) (not @verbose?))
-                    (formatted-schema "Currencies" (:currencies @schema) (not @verbose?))
-                    (formatted-schema "Categories" (:categories @schema) (not @verbose?))
-                    (formatted-schema "Vendors" (:vendors @schema) (not @verbose?))]]))))
+                      (formatted-schema "Users" (:users (<sub [:schema])) (not @verbose?)))
+                    (formatted-schema "Payment Methods" (:payment-methods (<sub [:schema])) (not @verbose?))
+                    (formatted-schema "Currencies" (:currencies (<sub [:schema])) (not @verbose?))
+                    (formatted-schema "Categories" (:categories (<sub [:schema])) (not @verbose?))
+                    (formatted-schema "Vendors" (:vendors (<sub [:schema])) (not @verbose?))]]))))
 
 (defn setup-panel []
-  (let [credentials (re-frame/subscribe [:credentials])]
-    (fn []
-      (if @credentials [config-panel] [login-panel]))))
+  (if (<sub [:credentials])
+    [config-panel]
+    [login-panel]))
+
 
 (defn wrap-page [page]
   [re-com/border
@@ -544,20 +535,15 @@
            {:id :setup   :label "setup"     :panel (wrap-page [setup-panel])}])
 
 (defn tab-panel []
-  (let [page (re-frame/subscribe [:page])]
-    (fn []
-      (:panel (or (first (filter #(= (:id %) @page)
-                                 tabs))
-                  :home-panel)))))
+  (:panel (or (first (filter #(= (:id %) (<sub [:page]))
+                             tabs))
+              :home-panel)))
 
 (defn tabs-row []
-  (let [page (re-frame/subscribe [:page])
-        server (re-frame/subscribe [:server])]
-    (fn []
-      [re-com/horizontal-pill-tabs
-       :tabs tabs
-       :model (or @page :home)
-       :on-change #(routes/goto-page % @server)])))
+  [re-com/horizontal-pill-tabs
+   :tabs tabs
+   :model (or (<sub [:page]) :home)
+   :on-change #(routes/goto-page % (<sub [:server]))])
 
 (defn main-panel []
   (let [schema (re-frame/subscribe [:schema])]
@@ -565,7 +551,7 @@
       ;; [TODO] This gets the schema once when the program starts. This is probably wrong:
       ;; - I don't know if this is called at the best time or place
       ;; - No mechanism to get changed schema; especially, e.g., if a client is open for many days
-      (re-frame/dispatch [:update-credentials])
+      (>evt [:update-credentials])
       [re-com/v-box
        :children [[app-title]
                   [tabs-row]
