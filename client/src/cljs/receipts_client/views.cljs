@@ -166,12 +166,12 @@
 ;;; See https://funcool.github.io/struct/latest/
 ;;; [TODO] Replace with spec, asap.
 (def complete-receipt
-  {:purchase/paymentMethod [[struct/required :message "'Paid by' missing"] struct/string]
+  {:purchase/source [[struct/required :message "'Source' missing"] struct/string]
    :purchase/date [[struct/required :message "Please specify date"] struct/positive]
    :purchase/price [[struct/required :message "Please specify amount"] struct/positive]
    :purchase/category [[struct/required :message  "Category missing"] struct/string]
    :purchase/vendor [[struct/required :message  "Choose vendor in category"] struct/string]
-   :purchase/forWhom [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
+   :purchase/consumer [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
 
 (defn validate-receipt [receipt]
   (struct/validate receipt complete-receipt))
@@ -185,13 +185,13 @@
     [re-com/v-box
      :gap tight-gap
      :children
-     [[labelled "Paid by"
-       (:purchase/paymentMethod validation-errors)
+     [[labelled "Source"
+       (:purchase/source validation-errors)
        [dropdown :multiple? false
-        :field-key :purchase/paymentMethod
-        :subs-key :payment-methods
-        :schema-id-key :paymentMethod/abbrev
-        :schema-label-key :paymentMethod/name]]
+        :field-key :purchase/source
+        :subs-key :sources
+        :schema-id-key :source/abbrev
+        :schema-label-key :source/name]]
       [labelled "Date"
        (:purchase/date validation-errors)
        [date-time-picker
@@ -226,10 +226,10 @@
         :model (or (:purchase/comment receipt) "")
         :on-change #(>evt [:edit-current-receipt :purchase/comment %])
         :attr {:type "text"}]]
-      [labelled "For Whom"
-       (:purchase/forWhom validation-errors)
+      [labelled "Consumer"
+       (:purchase/consumer validation-errors)
        [dropdown :multiple? true
-        :field-key :purchase/forWhom
+        :field-key :purchase/consumer
         :subs-key :users
         :filter-fn :user/isConsumer
         :schema-label-key :user/name
@@ -296,8 +296,8 @@
                                  (reset! new-user {}))
                      "Add User" "Create a new user"]]]))))
 
-(defn add-payment-method []
-  [:div "NYI (payment methods)"])
+(defn add-source []
+  [:div "NYI (sources)"])
 
 (defn add-category  []
   [:div "NYI (categories)"])
@@ -327,7 +327,7 @@
                    "Add Vendor" "Create a new vendor"]]])))
 
 (def entity-names [{:id :user :label "User"}
-                   {:id :payment-method :label "Payment Method"}
+                   {:id :source :label "Source"}
                    {:id :category :label "Category"}
                    {:id :vendor :label "vendor"}])
 
@@ -359,7 +359,7 @@
                       (case @action
                         :add (case @entity
                                :user (if admin? [add-user] [unavailable])
-                               :payment-method [add-payment-method]
+                               :source [add-source]
                                :category [add-category]
                                :vendor [add-vendor]
                                [:div "ERROR??"])
@@ -392,7 +392,7 @@
 
 (defn field-output [field value]
   (case field
-    :forWhom (str/join ", " value)
+    :consumer (str/join ", " value)
     :date (time-format/unparse date-format (time-coerce/to-date-time value))
     :time (time-format/unparse time-format (time-coerce/to-date-time value))
     :price (let [[currency amount] value
@@ -412,19 +412,19 @@
   [:table.table.table-striped.table-bordered.table-condensed
    [:thead [:tr
             (map (fn [h] ^{:key h}[:td h])
-                 ["Paid by" "Date" "Time" "Price" "Category" "Vendor" "Comment" "For Whom"])]]
-   [:tbody (map (fn [{:purchase/keys [paymentMethod date currency price category vendor comment forWhom] :as purchase}]
+                 ["Source" "Date" "Time" "Price" "Category" "Vendor" "Comment" "Consumer"])]]
+   [:tbody (map (fn [{:purchase/keys [source date currency price category vendor comment consumer] :as purchase}]
                   (let [row-id (:db/id purchase)
                         id-fn (partial str row-id "-")]
                     ^{:key row-id} [:tr
-                                    (history-cell id-fn :paymentMethod paymentMethod)
+                                    (history-cell id-fn :source source)
                                     (history-cell id-fn :date date)
                                     (history-cell id-fn :time date)
                                     (history-cell id-fn :price [currency price])
                                     (history-cell id-fn :category category)
                                     (history-cell id-fn :vendor vendor)
                                     (history-cell id-fn :comment comment)
-                                    (history-cell id-fn :forWhom forWhom)]))
+                                    (history-cell id-fn :consumer consumer)]))
                 purchases)]])
 
 (defn history-csv [csv]
@@ -509,7 +509,7 @@
                      :label "Show all?")
                     (when admin?
                       (formatted-schema "Users" (:users (<sub [:schema])) (not @verbose?)))
-                    (formatted-schema "Payment Methods" (:payment-methods (<sub [:schema])) (not @verbose?))
+                    (formatted-schema "Sources" (:sources (<sub [:schema])) (not @verbose?))
                     (formatted-schema "Currencies" (:currencies (<sub [:schema])) (not @verbose?))
                     (formatted-schema "Categories" (:categories (<sub [:schema])) (not @verbose?))
                     (formatted-schema "Vendors" (:vendors (<sub [:schema])) (not @verbose?))]]))))

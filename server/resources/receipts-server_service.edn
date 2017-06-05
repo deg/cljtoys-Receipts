@@ -28,8 +28,8 @@
       [:user/isEditor          :one  :boolean          "User can add entries"]
       [:user/isConsumer        :one  :boolean          "User can be listed as purchaser"]
 
-      [:paymentMethod/name     :one  :string :unique   "Payment method name"]
-      [:paymentMethod/abbrev   :one  :string :identity "Payment method name for Excel"]
+      [:source/name            :one  :string :unique   "Source name"]
+      [:source/abbrev          :one  :string :identity "Source name for Excel"]
 
       [:currency/name          :one  :string :unique   "Currency name"]
       [:currency/abbrev        :one  :string :identity "Brief currency name (e.g. USD or GBP)"]
@@ -39,10 +39,10 @@
       [:purchase/currency      :one  :string           "Dollars, Shekels, etc."]
       [:purchase/category      :one  :string           "Categoory of purchase"]
       [:purchase/vendor        :one  :string           "Vendor where purchased"]
-      [:purchase/paymentMethod :one  :string           "Payment method ID"]
+      [:purchase/source        :one  :string           "Source ID (abbrev)"]
       [:purchase/date          :one  :instant          "When purchased"]
       [:purchase/comment       :one  :string :fulltext "Comment"]
-      [:purchase/forWhom       :many :string           "For whom purchased"]]]}
+      [:purchase/consumer      :many :string           "End user"]]]}
    :receipts/data
    {:vase.norm/txes
     [[{:db/ident               :admin-account
@@ -83,7 +83,7 @@
 ;;;               :where (or [?e :user/name]
 ;;;                          [?e :category/name]
 ;;;                          [?e :vendor/name]
-;;;                          [?e :paymentMethod/name]
+;;;                          [?e :source/name]
 ;;;                          [?e :currency/name]
 ;;;                          [?e :purchase/uid])]}}
 ;;;
@@ -198,30 +198,30 @@
                            :vendor/description
                            :vendor/category]}]}
 
-     "/paymentMethods"
+     "/sources"
      {:get [receipts-server.interceptors/auth-editor
-            receipts-server.interceptors/sort-paymentMethods
+            receipts-server.interceptors/sort-sources
             #vase/query
-            {:name :receipts-server.v1/paymentMethods-get
+            {:name :receipts-server.v1/sources-get
              :query [:find  [(pull ?e [*]) ...]
-                     :where [?e :paymentMethod/name]]}]}
+                     :where [?e :source/name]]}]}
 
-     "/paymentMethod"
+     "/source"
      {:get [receipts-server.interceptors/auth-editor
             #vase/query
-            {:name :receipts-server.v1/paymentMethod-get
+            {:name :receipts-server.v1/source-get
              :params [name]
              :query [:find ?e ?name
                      :in $ ?name
                      :where
-                     [?e :paymentMethod/name ?name]]}]
+                     [?e :source/name ?name]]}]
       :post [receipts-server.interceptors/auth-editor
              #vase/transact
-             {:name :receipts-server.v1/paymentMethod-create
+             {:name :receipts-server.v1/source-create
               :properties [:db/id
                            :receipts/dynamic?
-                           :paymentMethod/name
-                           :paymentMethod/abbrev]}]}
+                           :source/name
+                           :source/abbrev]}]}
 
      "/currencies"
      {:get [receipts-server.interceptors/auth-editor
@@ -288,23 +288,23 @@
             #vase/query
             {:name :receipts-server.v1/purchase-get
              :params [[uid "n/a"] [price "n/a"] [currency "n/a"]
-                      [category "n/a"] [vendor "n/a"] [paymentMethod "n/a"]
-                      [date "n/a"] [comment "n/a"] [forWhom "n/a"]]
+                      [category "n/a"] [vendor "n/a"] [source "n/a"]
+                      [date "n/a"] [comment "n/a"] [consumer "n/a"]]
              :edn-coerce [date]
              :query [:find [(pull ?e [*]) ...]
-                     :in $ ?uid ?price ?currency ?category ?vendor ?paymentMethod ?date ?comment ?forWhom
+                     :in $ ?uid ?price ?currency ?category ?vendor ?source ?date ?comment ?consumer
                      :where
                      (or-join [?e ?uid ?price ?currency ?category ?vendor
-                               ?paymentMethod ?date ?comment ?forWhom]
+                               ?source ?date ?comment ?consumer]
                               [?e :purchase/uid ?uid]
                               [?e :purchase/price ?price]
                               [?e :purchase/currency ?currency]
                               [?e :purchase/category ?category]
                               [?e :purchase/vendor ?vendor]
-                              [?e :purchase/paymentMethod ?by]
+                              [?e :purchase/source ?by]
                               [?e :purchase/date ?date]
                               [?e :purchase/comment ?comment]
-                              [?e :purchase/forWhom ?forWhom])]}]
+                              [?e :purchase/consumer ?consumer])]}]
       :post [receipts-server.interceptors/auth-editor
              #vase/intercept
              {:name :receipts-server.v1/purchase-post-intercept1
@@ -325,9 +325,9 @@
                            :purchase/currency
                            :purchase/category
                            :purchase/vendor
-                           :purchase/paymentMethod
+                           :purchase/source
                            :purchase/date
                            :purchase/comment
-                           :purchase/forWhom]}]}}
+                           :purchase/consumer]}]}}
     :vase.api/schemas [:receipts/schema receipts/data]
     :vase.api/forward-headers ["vaserequest-id"]}}}}

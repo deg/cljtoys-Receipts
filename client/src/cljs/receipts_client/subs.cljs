@@ -72,9 +72,9 @@
    (or (get-in db [:schema :users]) [])))
 
 (re-frame/reg-sub
- :payment-methods
- (fn payment-methods [db _]
-   (or (get-in db [:schema :payment-methods]) [])))
+ :sources
+ (fn source [db _]
+   (or (get-in db [:schema :sources]) [])))
 
 (re-frame/reg-sub
  :current-receipt

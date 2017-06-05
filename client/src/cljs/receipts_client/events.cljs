@@ -125,11 +125,11 @@
                                                  :params credentials
                                                  :on-success [:got-schema :currencies]}))
 
-                             (when (#{:all "paymentMethod"} api)
+                             (when (#{:all "source"} api)
                                (api/get-request {:server server
-                                                 :api "paymentMethods"
+                                                 :api "sources"
                                                  :params credentials
-                                                 :on-success [:got-schema :payment-methods]}))
+                                                 :on-success [:got-schema :sources]}))
                              (when (#{:all "user"} api)
                                (api/get-request {:server server
                                                  :api "users"
@@ -221,7 +221,7 @@
 
 (defn reset-receipt [receipt]
   (assoc
-   (dissoc receipt :purchase/price :purchase/category :purchase/vendor :purchase/forWhom :purchase/comment)
+   (dissoc receipt :purchase/price :purchase/category :purchase/vendor :purchase/consumer :purchase/comment)
    :purchase/date (time/now)))
 
 (re-frame/reg-event-fx

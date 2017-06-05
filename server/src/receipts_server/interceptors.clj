@@ -215,9 +215,9 @@
                         label-key)
                   body)))))
 
-(def sort-paymentMethods
+(def sort-sources
   (i/interceptor
-   {:name ::sort-paymentMethods :leave #(sort-field % :purchase/paymentMethod :paymentMethod/name)}))
+   {:name ::sort-sources :leave #(sort-field % :purchase/source :source/name)}))
 
 (def sort-categories
   (i/interceptor
@@ -229,4 +229,4 @@
 
 (def sort-users
   (i/interceptor
-   {:name ::sort-users :leave #(sort-field % :purchase/forWhom :user/abbrev)}))
+   {:name ::sort-users :leave #(sort-field % :purchase/consumer :user/abbrev)}))
