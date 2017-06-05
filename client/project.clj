@@ -1,4 +1,8 @@
 (defproject receipts-client "0.1.0-SNAPSHOT"
+  :description "Client side of the Receipts app"
+  :url "https://github.com/deg/cljtoys-Receipts"
+  :license {:name "Eclipse Public License"
+            :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
                  [org.clojure/clojurescript "1.9.562"]
                  [reagent "0.6.2"]
@@ -15,7 +19,6 @@
                  [funcool/struct "1.0.0"]
 
                  ;; Cookie support
-                 [com.smxemail/re-frame-cookie-fx "0.0.3-SNAPSHOT"]
                  [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]

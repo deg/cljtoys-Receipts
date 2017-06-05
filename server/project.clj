@@ -1,10 +1,10 @@
 (defproject receipts-server "0.0.1-SNAPSHOT"
-  :description "Simple receipts server"
-  :url "http://degel.com"
+  :description "Server side of the Receipts app"
+  :url "https://github.com/deg/cljtoys-Receipts"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
-                 [io.pedestal/pedestal.service "0.5.2" :exclusions [cheshire]]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
+                 [io.pedestal/pedestal.service "0.5.2" :exclusions [cheshire org.clojure/core.async]]
                  [com.datomic/datomic-pro "0.9.5561" :exclusions [com.fasterxml.jackson.core/jackson-core
                                                                   com.fasterxml.jackson.core/jackson-databind
                                                                   joda-time
