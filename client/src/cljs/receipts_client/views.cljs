@@ -3,16 +3,18 @@
 
 (ns receipts-client.views
   (:require
-   [cljs.tools.reader :as reader]
    [cljs-time.coerce :as time-coerce]
    [cljs-time.core :as time]
    [cljs-time.format :as time-format]
+   [cljs.tools.reader :as reader]
+   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [re-com.core :as re-com]
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
    [receipts-client.routes :as routes]
    [receipts-client.utils :as utils]
+   [receipts.specs :as specs]
    [struct.core :as struct]))
 
 
@@ -36,7 +38,7 @@
    :label (str (<sub [:name])
                (when (= (<sub [:server]) :development)
                  " (local test server)"))
-   :level :level1] )
+   :level :level1])
 
 (defn panel-title [label]
   [re-com/title :label label :level :level1])
@@ -51,6 +53,9 @@
   [re-com/title :label label :level :level4])
 
 (defn button [dispatch label tooltip]
+  {:pre [(specs/validate (s/or :dispatch ::specs/event-vector :fn ifn?) dispatch)
+         (specs/validate string? label)
+         (specs/validate string? tooltip)]}
   [re-com/button
    :label label
    :tooltip tooltip
@@ -59,6 +64,8 @@
                 (dispatch))])
 
 (defn labelled [label error component]
+  {:pre [(specs/validate string? label)
+         (specs/validate (s/nilable string?) error)]}
   (fn [label error component]
     [re-com/h-box
      :width "100%"
@@ -74,8 +81,11 @@
 ;;; Per re-com, new-date-time is a goog.date.Date, while new-time is an integer encoding
 ;;; (+ minutes (* 100 hours)).
 ;;; old-date-time, and the retval, on the other hand, are instances of goog.date.DateTime
-;;; [TOOD] This would be a great first place to learn spec pre-condition syntax
 (defn update-date-time [old-date-time new-date-time new-time]
+  {:pre [(specs/validate (s/or :goog utils/goog-date? :inst inst?) old-date-time)
+         (specs/validate (s/or :goog utils/goog-date? :inst inst?) new-date-time)
+         (specs/validate (s/nilable int?) new-time)]
+   :post [(specs/validate inst? %)]}
   (let [old-date-time (time-coerce/to-date-time old-date-time)]
     (time-coerce/to-date
      (time/date-time (time/year  (or new-date-time old-date-time))
@@ -195,7 +205,7 @@
       [labelled "Date"
        (:purchase/date validation-errors)
        [date-time-picker
-        :model (or (:purchase/date receipt) (time/now))
+        :model (or (:purchase/date receipt) (time-coerce/to-date (time/now)))
         :on-change #(>evt [:edit-current-receipt :purchase/date %])]]
       [labelled "Price"
        (:purchase/price validation-errors)
@@ -239,7 +249,9 @@
        :children
        [[re-com/button
          :disabled? (not (valid-receipt? receipt))
-         :on-click #(>evt [:submit-receipt receipt])
+         :on-click #(>evt [:submit-receipt (-> receipt
+                                               (update :purchase/date time-coerce/to-date)
+                                               (update :purchase/price js/parseFloat))])
          :label "Submit Receipt"]]]]]))
 
 (defn home-panel []

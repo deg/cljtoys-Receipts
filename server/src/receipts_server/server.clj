@@ -4,6 +4,7 @@
 (ns receipts-server.server
   (:gen-class) ; for -main method in uberjar
   (:require
+   [clojure.spec.alpha :as s]
    [com.cognitect.vase :as vase]
    [io.pedestal.http :as server]
    [io.pedestal.http.route :as route]
@@ -47,6 +48,7 @@
 (defn run-dev
   "The entry-point for 'lein run-dev'"
   [& args]
+  (s/check-asserts true)
   (println "\nCreating your [DEV] server...")
   (-> service/service ;; start with production configuration
       (merge {:env :dev
@@ -97,6 +99,7 @@
 
 ;;; [TODO] Temp hack, until I learn more tooling
 (defn reload []
+  (require 'receipts.specs :reload-all)
   (require 'receipts-server.render :reload-all)
   (require 'receipts-server.interceptors :reload-all)
   (require 'receipts-server.service :reload-all)

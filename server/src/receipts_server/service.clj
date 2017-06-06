@@ -2,13 +2,14 @@
 ;;; Copyright (c) 2017, David Goldfarb
 
 (ns receipts-server.service
-  (:require [io.pedestal.http :as http]
-            [io.pedestal.http.route :as route]
-            [io.pedestal.http.body-params :as body-params]
-            [ring.util.response :as ring-resp]
-            [com.cognitect.vase :as vase]
-            [receipts-server.interceptors]
-            [receipts-server.render]))
+  (:require
+   [com.cognitect.vase :as vase]
+   [io.pedestal.http :as http]
+   [io.pedestal.http.body-params :as body-params]
+   [io.pedestal.http.route :as route]
+   [receipts-server.interceptors]
+   [receipts-server.render]
+   [ring.util.response :as ring-resp]))
 
 ;;;- (defn about-page
 ;;;-   [request]

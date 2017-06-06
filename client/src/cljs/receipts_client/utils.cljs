@@ -38,3 +38,12 @@
     (if index
       (apply update coll index updater update-args)
       coll)))
+
+;; HT: to https://stackoverflow.com/questions/32467299/clojurescript-convert-arbitrary-javascript-object-to-clojure-script-map
+(defn jsx->clj [x]
+  (into {} (for [k (.keys js/Object x)] [k (aget x k)])))
+
+(defn goog-date? [x]
+  (if-let [date (.-date x)]
+    (inst? date)
+    false))

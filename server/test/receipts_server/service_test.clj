@@ -14,30 +14,13 @@
 ;; like GET, POST, post-json, post-edn, and others
 
 (deftest home-page-test
-  (is (= (:body (response-for (helper/service) :get "/"))
-         "Hello World!"))
-  (is (= (:headers (helper/GET "/"))
-         {"Content-Type" "text/html;charset=UTF-8"
-          "Strict-Transport-Security" "max-age=31536000; includeSubdomains"
-          "X-Frame-Options" "DENY"
-          "X-Content-Type-Options" "nosniff"
-          "X-XSS-Protection" "1; mode=block"
-          "X-Download-Options" "noopen"
-          "X-Permitted-Cross-Domain-Policies" "none"
-          "Content-Security-Policy" "object-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:;"})))
+  (let [{:keys [body header]} (helper/GET "/")]
+    (is (= "Not Found" body))
+    (is (nil? header))))
 
 
-(deftest about-page-test
-  (helper/with-service service/service
-    (is (.contains (:body (response-for (helper/service) :get "/about"))
-                   "Clojure 1.9"))
-    (is (= (:headers (helper/GET "/about"))
-           {"Content-Type" "text/html;charset=UTF-8"
-            "Strict-Transport-Security" "max-age=31536000; includeSubdomains"
-            "X-Frame-Options" "DENY"
-            "X-Content-Type-Options" "nosniff"
-            "X-XSS-Protection" "1; mode=block"
-            "X-Download-Options" "noopen"
-            "X-Permitted-Cross-Domain-Policies" "none"
-            "Content-Security-Policy" "object-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:;"}))))
+(deftest random-page-test
+  (let [{:keys [body header]} (helper/GET "foo-bar.html")]
+    (is (= "Not Found" body))
+    (is (nil? header))))
 

@@ -32,6 +32,7 @@
   ;; If you use HTTP/2 or ALPN, use the java-agent to pull in the correct alpn-boot dependency
   ;:java-agents [[org.mortbay.jetty.alpn/jetty-alpn-agent "2.0.3"]]
   :profiles {:dev {:aliases {"run-dev" ["trampoline" "run" "-m" "receipts-server.server/run-dev"]}
-                   :dependencies [[io.pedestal/pedestal.service-tools "0.5.2"]]}
+                   :dependencies [[io.pedestal/pedestal.service-tools "0.5.2"]
+                                  [org.clojure/test.check "0.9.0"]]}
              :uberjar {:aot [receipts-server.server]}}
   :main ^{:skip-aot true} receipts-server.server)
