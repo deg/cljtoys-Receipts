@@ -254,12 +254,22 @@
                                                (update :purchase/price js/parseFloat))])
          :label "Submit Receipt"]]]]]))
 
+(defn interstitial-page []
+  [re-com/v-box
+   :gap tight-gap
+   :children [[re-com/h-box
+               :children [[:img {:src (str "http://thecatapi.com/api/images/get?format=src&size=small&"
+                                           "cacheBuster=" (str (rand)))}]
+                          [re-com/gap :size "1"]]]
+              [button [:next-receipt] "Continue" "enter next receipt"]]])
+
 (defn home-panel []
   (if (:user/isEditor (<sub [:user]))
     [re-com/v-box
      :gap title-gap
-     :children [(panel-title "New Receipt")
-                [receipt-page]]]
+     :children (if (<sub [:receipt-stored?])
+                 [(panel-title "Receipt entered") [interstitial-page]]
+                 [(panel-title "New Receipt")     [receipt-page]])]
     [login-panel]))
 
 (defn add-user []

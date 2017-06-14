@@ -43,7 +43,7 @@
           :goto-page [page server]}
          (case page
            :history {:dispatch [:get-history]}
-           :home {:dispatch [:submitted-receipt]}
+           :home {:dispatch [:next-receipt]}
            :about {:dispatch [:get-about-server]}
            {}))))
 
@@ -261,8 +261,8 @@
                         :purchase/price (:purchase/price receipt)
                         ;; [TODO] temp
                         :purchase/currency "NIS"))
-    :db (assoc db
-               :previous-receipt receipt)}))
+    :db ;; [TODO] :previous-receipt not yet used. Remove this line if we don't do smart history or defaults
+        (assoc db :previous-receipt receipt)}))
 
 (defn reset-receipt [receipt]
   {:pre [(specs/validate (s/nilable ::specs/purchase) receipt)]
@@ -271,11 +271,19 @@
    (dissoc receipt :purchase/price :purchase/category :purchase/vendor :purchase/consumer :purchase/comment)
    :purchase/date (time-coerce/to-date (time/now))))
 
-(re-frame/reg-event-fx
+(re-frame/reg-event-db
  :submitted-receipt
- (fn submitted-receipt [{db :db} [_ response]]
+ (fn submitted-receipt [db _]
    {:pre [(specs/validate ::specs/db db)]}
-   {:db (update db :current-receipt reset-receipt)
+   (assoc db :receipt-stored? true)))
+
+(re-frame/reg-event-fx
+ :next-receipt
+ (fn next-receipt [{db :db}]
+   {:pre [(specs/validate ::specs/db db)]}
+   {:db (-> db
+            (dissoc :receipt-stored?)
+            (update :current-receipt reset-receipt))
     :dispatch [:get-schema :all]}))
 
 (re-frame/reg-event-fx

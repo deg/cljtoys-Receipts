@@ -80,3 +80,8 @@
  :current-receipt
  (fn current-receipt [db _]
    (get db :current-receipt)))
+
+(re-frame/reg-sub
+ :receipt-stored?
+ (fn receipt-stored? [db _]
+   (get db :receipt-stored?)))
