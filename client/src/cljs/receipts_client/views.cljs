@@ -493,7 +493,8 @@
       (let [email (:user/email (<sub [:user]))
             consumer? (:user/isConsumer (<sub [:user]))
             editor? (:user/isEditor (<sub [:user]))
-            admin? (:user/isAdmin (<sub [:user]))]
+            admin? (:user/isAdmin (<sub [:user]))
+            schema (<sub [:schema])]
         [re-com/v-box
          :gap title-gap
          :children [(panel-title "Setup")
@@ -530,11 +531,11 @@
                      :on-change #(reset! verbose? %)
                      :label "Show all?")
                     (when admin?
-                      (formatted-schema "Users" (:users (<sub [:schema])) (not @verbose?)))
-                    (formatted-schema "Sources" (:sources (<sub [:schema])) (not @verbose?))
-                    (formatted-schema "Currencies" (:currencies (<sub [:schema])) (not @verbose?))
-                    (formatted-schema "Categories" (:categories (<sub [:schema])) (not @verbose?))
-                    (formatted-schema "Vendors" (:vendors (<sub [:schema])) (not @verbose?))]]))))
+                      (formatted-schema "Users" (:users schema) (not @verbose?)))
+                    (formatted-schema "Sources" (:sources schema) (not @verbose?))
+                    (formatted-schema "Currencies" (:currencies schema) (not @verbose?))
+                    (formatted-schema "Categories" (:categories schema) (not @verbose?))
+                    (formatted-schema "Vendors" (:vendors schema) (not @verbose?))]]))))
 
 (defn setup-panel []
   (if (<sub [:credentials])

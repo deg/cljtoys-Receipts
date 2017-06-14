@@ -36,7 +36,7 @@
  (fn [{db :db} [_ page server]]
    {:pre [(specs/validate ::specs/db db)
           (specs/validate keyword? page)
-          (specs/validate keyword? server)]}
+          (specs/validate (s/nilable keyword?) server)]}
    (into {:db (assoc db
                      :page page
                      :server (or server (:server db)))
