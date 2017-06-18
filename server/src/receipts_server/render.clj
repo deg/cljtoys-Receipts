@@ -17,8 +17,8 @@
 (defn csv-purchases [purchases]
   {:pre [(s/assert (s/coll-of ::specs/purchase) purchases)]
    :post [(s/assert string? %)]}
-  (let [cells (into [["Source" "Date" "Amount" "Category" "Vendor" "Comment" "Consumer" "Currency"]]
-                    (mapv (fn [{:purchase/keys [source date currency price category vendor comment consumer]}]
+  (let [cells (into [["Source" "Date" "Amount" "Category" "Vendor" "Comment" "Consumer" "Currency" "User"]]
+                    (mapv (fn [{:purchase/keys [source date currency price category vendor comment consumer user]}]
                             (vector source
                                     (time-format/unparse date-format (time-coerce/to-date-time date))
                                     (str price)
@@ -26,6 +26,7 @@
                                     vendor
                                     (or comment "")
                                     (str/join ", " consumer)
-                                    currency))
+                                    currency
+                                    user))
                           (sort-by :purchase/date purchases)))]
     (csv/write-csv cells)))

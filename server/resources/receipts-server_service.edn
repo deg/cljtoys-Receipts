@@ -42,7 +42,8 @@
       [:purchase/source        :one  :string           "Source ID (abbrev)"]
       [:purchase/date          :one  :instant          "When purchased"]
       [:purchase/comment       :one  :string :fulltext "Comment"]
-      [:purchase/consumer      :many :string           "End user"]]]}
+      [:purchase/consumer      :many :string           "End user"]
+      [:purchase/user          :one  :string           "Logged-in user"]]]}
    :receipts/data
    {:vase.norm/txes
     [[{:db/ident               :admin-account
@@ -225,6 +226,7 @@
 
      "/currencies"
      {:get [receipts-server.interceptors/auth-editor
+            receipts-server.interceptors/sort-currencies
             #vase/query
             {:name :receipts-server.v1/currencies-get
              :query [:find [(pull ?e [*]) ...]
@@ -292,7 +294,7 @@
                       [date "n/a"] [comment "n/a"] [consumer "n/a"]]
              :edn-coerce [date]
              :query [:find [(pull ?e [*]) ...]
-                     :in $ ?uid ?price ?currency ?category ?vendor ?source ?date ?comment ?consumer
+                     :in $ ?uid ?price ?currency ?category ?vendor ?source ?date ?comment ?consumer ?user
                      :where
                      (or-join [?e ?uid ?price ?currency ?category ?vendor
                                ?source ?date ?comment ?consumer]
@@ -304,7 +306,8 @@
                               [?e :purchase/source ?by]
                               [?e :purchase/date ?date]
                               [?e :purchase/comment ?comment]
-                              [?e :purchase/consumer ?consumer])]}]
+                              [?e :purchase/consumer ?consumer]
+                              [?e :purchase/user ?user])]}]
       :post [receipts-server.interceptors/auth-editor
              #vase/intercept
              {:name :receipts-server.v1/purchase-post-intercept1
@@ -328,6 +331,7 @@
                            :purchase/source
                            :purchase/date
                            :purchase/comment
-                           :purchase/consumer]}]}}
+                           :purchase/consumer
+                           :purchase/user]}]}}
     :vase.api/schemas [:receipts/schema receipts/data]
     :vase.api/forward-headers ["vaserequest-id"]}}}}

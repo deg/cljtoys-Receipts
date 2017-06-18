@@ -259,8 +259,7 @@
                         ;; [TODO]  Need better UID
                         :purchase/uid (str "UID-" (.getTime (js/Date.)) "-" (rand-int 1000))
                         :purchase/price (:purchase/price receipt)
-                        ;; [TODO] temp
-                        :purchase/currency "NIS"))
+                        :purchase/user (-> db :credentials ((:server db)) :user/email)))
     :db ;; [TODO] :previous-receipt not yet used. Remove this line if we don't do smart history or defaults
         (assoc db :previous-receipt receipt)}))
 
@@ -309,6 +308,33 @@
                       "user/isAdmin" admin?
                       "user/isEditor" editor?
                       "user/isConsumer" consumer?})))}))
+
+(re-frame/reg-event-fx
+ :add-source
+ (fn add-source [{db :db} [_ {:keys [name abbrev]}]]
+   {:http-xhrio (post-params
+                 db "source" [:get-schema "source"]
+                     {"receipts/dynamic?" true
+                      "source/name" name
+                      "source/abbrev" abbrev})}))
+
+(re-frame/reg-event-fx
+ :add-category
+ (fn add-category [{db :db} [_ {:keys [name description]}]]
+   {:http-xhrio (post-params
+                 db "category" [:get-schema "category"]
+                     {"receipts/dynamic?" true
+                      "category/name" name
+                      "category/description" description})}))
+
+(re-frame/reg-event-fx
+ :add-currency
+ (fn add-currency [{db :db} [_ {:keys [name abbrev]}]]
+   {:http-xhrio (post-params
+                 db "currency" [:get-schema "currency"]
+                     {"receipts/dynamic?" true
+                      "currency/name" name
+                      "currency/abbrev" abbrev})}))
 
 (re-frame/reg-event-fx
  :add-vendor

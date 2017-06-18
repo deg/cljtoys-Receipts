@@ -23,6 +23,7 @@
                      :purchase/price
                      :purchase/category
                      :purchase/consumer
+                     :purchase/currency
                      :purchase/vendor
                      :purchase/comment})
 (s/def ::purchase-keys purchase-keys)

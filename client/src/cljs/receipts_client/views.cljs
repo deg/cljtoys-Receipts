@@ -25,6 +25,7 @@
 (def title-gap "0.5rem")
 (def title-width "7em")
 (def tiny-field-width "5rem")
+(def small-field-width "9rem")
 (def tight-field-width "11rem")
 (def field-width "14rem")
 
@@ -132,12 +133,12 @@
 
   multiple? - Allow multiple selection
   "
-  [& {:keys [multiple? field-key subs-key filter-fn schema-key schema-id-key schema-label-key]
+  [& {:keys [multiple? field-key subs-key filter-fn schema-key schema-id-key schema-label-key width]
       :or {model-key-fn identity
            schema-id-key schema-key
            schema-label-key schema-key}}]
   [(if multiple? re-com/selection-list re-com/single-dropdown)
-   :width field-width
+   :width (or width field-width)
    :model ((if multiple? (partial into #{}) identity)
            (field-key (<sub [:current-receipt])))
    :choices (mapv (fn [{id schema-id-key
@@ -180,6 +181,7 @@
    :purchase/date [[struct/required :message "Please specify date"] struct/positive]
    :purchase/price [[struct/required :message "Please specify amount"] struct/positive]
    :purchase/category [[struct/required :message  "Category missing"] struct/string]
+   :purchase/currency [[struct/required :message  "Currency missing"] struct/string]
    :purchase/vendor [[struct/required :message  "Choose vendor in category"] struct/string]
    :purchase/consumer [[struct/required :message  "Specify user(s) of this purchase"] struct/set]})
 
@@ -208,14 +210,24 @@
         :model (or (:purchase/date receipt) (time-coerce/to-date (time/now)))
         :on-change #(>evt [:edit-current-receipt :purchase/date %])]]
       [labelled "Price"
-       (:purchase/price validation-errors)
-       [re-com/input-text
+       (or (:purchase/price validation-errors)
+           (:purchase/currency validation-errors))
+       [re-com/h-box
         :width field-width
-        :model (or (:purchase/price receipt) "0.00")
-        :on-change #(>evt [:edit-current-receipt :purchase/price %])
-        :change-on-blur? false
-        :attr {:type "number"
-               :step "0.01"}]]
+        :justify :between
+        :children [[re-com/input-text
+                    :width small-field-width
+                    :model (or (:purchase/price receipt) "0.00")
+                    :on-change #(>evt [:edit-current-receipt :purchase/price %])
+                    :change-on-blur? false
+                    :attr {:type "number"
+                           :step "0.01"}]
+                   [dropdown
+                    :multiple? false
+                    :width tiny-field-width
+                    :field-key :purchase/currency
+                    :subs-key :currencies
+                    :schema-key :currency/abbrev]]]]
       [labelled "Category"
        (:purchase/category validation-errors)
        [dropdown :multiple? false
@@ -272,57 +284,96 @@
                  [(panel-title "New Receipt")     [receipt-page]])]
     [login-panel]))
 
+(defn has? [entity-atom field]
+  (-> @entity-atom field str/blank? not))
+
+(defn add-field [into-atom & {:keys [label field type] :or {type "text"}}]
+  [labelled label nil
+   [re-com/input-text
+    :width field-width
+    :model (or (field @into-atom) "")
+    :change-on-blur? false
+    :on-change #(swap! into-atom assoc field %)
+    :attr {:type type}]])
+
 (defn add-user []
   (let [new-user (reagent/atom {})]
     (fn []
-      (let [editor? (or (-> @new-user :permissions :user/isAdmin)
+      (let [i-am-admin? (:user/isAdmin (<sub [:user]))
+            editor? (or (-> @new-user :permissions :user/isAdmin)
                         (-> @new-user :permissions :user/isEditor))
             consumer? (-> @new-user :permissions :user/isConsumer)]
         [re-com/v-box
          :gap std-gap
-         :children [[labelled "Name" nil
-                     [re-com/input-text
-                      :width field-width
-                      :model (or (:name @new-user) "")
-                      :on-change #(swap! new-user assoc :name %)
-                      :attr {:type "text"}]]
+         :children [(add-field new-user :label "Name" :field :name)
                     (when editor?
-                      [labelled "Password" nil
-                       [re-com/input-text
-                        :width field-width
-                        :model (or (:password @new-user) "")
-                        :on-change #(swap! new-user assoc :password %)
-                        :attr {:type "password"}]])
+                      (add-field new-user :label "Password" :field :password :type "password"))
                     (when consumer?
-                      [labelled "Abbrev" nil
-                       [re-com/input-text
-                        :width field-width
-                        :model (or (:abbrev @new-user) "")
-                        :on-change #(swap! new-user assoc :abbrev %)
-                        :attr {:type "text"}]])
+                      (add-field new-user :label "Abbrev" :field :abbrev))
                     (when editor?
-                      [labelled "Email" nil
-                       [re-com/input-text
-                        :width field-width
-                        :model (or (:email @new-user) "")
-                        :on-change #(swap! new-user assoc :email %)
-                        :attr {:type "Email"}]])
+                      (add-field new-user :label "Email" :field :email :type "Email"))
                     [labelled "Permissions" nil
                      [re-com/selection-list
-                      :choices [{:id :user/isAdmin :label "Administrator"}
-                                {:id :user/isEditor :label "Editor"}
-                                {:id :user/isConsumer :label "Consumer"}]
+                      :choices (if i-am-admin?
+                                 [{:id :user/isAdmin :label "Administrator"}
+                                  {:id :user/isEditor :label "Editor"}
+                                  {:id :user/isConsumer :label "Consumer"}]
+                                 [{:id :user/isConsumer :label "Consumer"}])
                       :model (or (:permissions @new-user) #{})
                       :on-change #(swap! new-user assoc :permissions %)]]
-                    [button #(do (>evt [:add-user @new-user])
-                                 (reset! new-user {}))
-                     "Add User" "Create a new user"]]]))))
+                    [re-com/button
+                     :disabled? (not (and (has? new-user :name)
+                                          (or (and consumer? (has? new-user :abbrev))
+                                              (and editor? (has? new-user :password) (has? new-user :email)))))
+                     :label "Add User"
+                     :tooltip "Create a new user"
+                     :on-click #(do (>evt [:add-user @new-user])
+                                    (reset! new-user {}))]]]))))
 
 (defn add-source []
-  [:div "NYI (sources)"])
+  (let [new-source (reagent/atom {})]
+    (fn []
+      [re-com/v-box
+       :gap std-gap
+       :children [(add-field new-source :label "Name" :field :name)
+                  (add-field new-source :label "Abbrev" :field :abbrev)
+                  [re-com/button
+                   :disabled? (not (and (has? new-source :name)
+                                        (has? new-source :abbrev)))
+                   :label "Add Source"
+                   :tooltip "Create a new source"
+                   :on-click #(do (>evt [:add-source @new-source])
+                                  (reset! new-source {}))]]])))
 
 (defn add-category  []
-  [:div "NYI (categories)"])
+  (let [new-category (reagent/atom {})]
+    (fn []
+      [re-com/v-box
+       :gap std-gap
+       :children [(add-field new-category :label "Name" :field :name)
+                  (add-field new-category :label "Description" :field :description)
+                  [re-com/button
+                   :disabled? (not (and (has? new-category :name)
+                                        (has? new-category :description)))
+                   :label "Add Category"
+                   :tooltip "Create a new category"
+                   :on-click #(do (>evt [:add-category @new-category])
+                                  (reset! new-category {}))]]])))
+
+(defn add-currency  []
+  (let [new-currency (reagent/atom {})]
+    (fn []
+      [re-com/v-box
+       :gap std-gap
+       :children [(add-field new-currency :label "Name" :field :name)
+                  (add-field new-currency :label "Abbrev" :field :abbrev)
+                  [re-com/button
+                   :disabled? (not (and (has? new-currency :name)
+                                        (has? new-currency :abbrev)))
+                   :label "Add Currency"
+                   :tooltip "Create a new currency"
+                   :on-click #(do (>evt [:add-currency @new-currency])
+                                  (reset! new-currency {}))]]]))  )
 
 (defn add-vendor []
   (let [categories (re-frame/subscribe [:categories])
@@ -351,41 +402,41 @@
 (def entity-names [{:id :user :label "User"}
                    {:id :source :label "Source"}
                    {:id :category :label "Category"}
+                   {:id :currency :label "Currency"}
                    {:id :vendor :label "vendor"}])
 
 (defn edit-panel []
-  (let [user (re-frame/subscribe [:user])
-        actions [{:id :add :label "Add"}
+  (let [actions [{:id :add :label "Add"}
                  {:id :edit :label "Edit"}]
         action (reagent/atom :add)
         entity (reagent/atom :vendor)]
     (fn []
-      (if @user
-        (let [admin? (:user/isAdmin @user)]
-          [re-com/v-box
-           :gap title-gap
-           :children [[panel-title "Schema Editor"]
-                      [labelled "Action" nil
-                       [re-com/h-box
-                        :gap std-gap
-                        :children [[re-com/single-dropdown :width tiny-field-width
-                                    :choices actions
-                                    :model action
-                                    :on-change #(reset! action %)]
-                                   [re-com/single-dropdown :width tight-field-width
-                                    :choices entity-names
-                                    :model entity
-                                    :on-change #(reset! entity %)]]]]
-                      [panel-subtitle (str (utils/get-at actions :id @action :label) " "
-                                           (utils/get-at entity-names :id @entity :label))]
-                      (case @action
-                        :add (case @entity
-                               :user (if admin? [add-user] [unavailable])
-                               :source [add-source]
-                               :category [add-category]
-                               :vendor [add-vendor]
-                               [:div "ERROR??"])
-                        :edit [:div "NYI"])]])
+      (if (<sub [:user])
+        [re-com/v-box
+         :gap title-gap
+         :children [[panel-title "Schema Editor"]
+                    [labelled "Action" nil
+                     [re-com/h-box
+                      :gap std-gap
+                      :children [[re-com/single-dropdown :width tiny-field-width
+                                  :choices actions
+                                  :model action
+                                  :on-change #(reset! action %)]
+                                 [re-com/single-dropdown :width tight-field-width
+                                  :choices entity-names
+                                  :model entity
+                                  :on-change #(reset! entity %)]]]]
+                    [panel-subtitle (str (utils/get-at actions :id @action :label) " "
+                                         (utils/get-at entity-names :id @entity :label))]
+                    (case @action
+                      :add (case @entity
+                             :user [add-user]
+                             :source [add-source]
+                             :category [add-category]
+                             :currency [add-currency]
+                             :vendor [add-vendor]
+                             [:div "ERROR??"])
+                      :edit [:div "NYI"])]]
         [login-panel]))))
 
 (defn about-panel []
@@ -434,8 +485,8 @@
   [:table.table.table-striped.table-bordered.table-condensed
    [:thead [:tr
             (map (fn [h] ^{:key h}[:td h])
-                 ["Source" "Date" "Time" "Price" "Category" "Vendor" "Comment" "Consumer"])]]
-   [:tbody (map (fn [{:purchase/keys [source date currency price category vendor comment consumer] :as purchase}]
+                 ["Source" "Date" "Time" "Price" "Category" "Vendor" "Comment" "Consumer" "User"])]]
+   [:tbody (map (fn [{:purchase/keys [source date currency price category vendor comment consumer user] :as purchase}]
                   (let [row-id (:db/id purchase)
                         id-fn (partial str row-id "-")]
                     ^{:key row-id} [:tr
@@ -446,7 +497,8 @@
                                     (history-cell id-fn :category category)
                                     (history-cell id-fn :vendor vendor)
                                     (history-cell id-fn :comment comment)
-                                    (history-cell id-fn :consumer consumer)]))
+                                    (history-cell id-fn :consumer consumer)
+                                    (history-cell id-fn :user user)]))
                 purchases)]])
 
 (defn history-csv [csv]
@@ -530,8 +582,7 @@
                      :model verbose?
                      :on-change #(reset! verbose? %)
                      :label "Show all?")
-                    (when admin?
-                      (formatted-schema "Users" (:users schema) (not @verbose?)))
+                    (formatted-schema "Users" (:users schema) (not @verbose?))
                     (formatted-schema "Sources" (:sources schema) (not @verbose?))
                     (formatted-schema "Currencies" (:currencies schema) (not @verbose?))
                     (formatted-schema "Categories" (:categories schema) (not @verbose?))

@@ -62,6 +62,11 @@
    (or (get-in db [:schema :categories]) [])))
 
 (re-frame/reg-sub
+ :currencies
+ (fn currencies [db _]
+   (or (get-in db [:schema :currencies]) [])))
+
+(re-frame/reg-sub
  :vendors
  (fn vendors [db _]
    (or (get-in db [:schema :vendors]) [])))

@@ -282,6 +282,10 @@
   (i/interceptor
    {:name ::sort-categories :leave #(sort-field % :purchase/category :category/name)}))
 
+(def sort-currencies
+  (i/interceptor
+   {:name ::sort-currencies :leave #(sort-field % :purchase/currency :currency/abbrev)}))
+
 (def sort-vendors
   (i/interceptor
    {:name ::sort-vendors :leave #(sort-field % :purchase/vendor :vendor/name)}))
