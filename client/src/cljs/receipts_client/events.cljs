@@ -3,7 +3,6 @@
 
 (ns receipts-client.events
   (:require
-   [ajax.core :as ajax]
    [cljs-time.coerce :as time-coerce]
    [cljs-time.core :as time]
    [clojure.spec.alpha :as s]

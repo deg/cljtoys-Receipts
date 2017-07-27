@@ -23,7 +23,7 @@
                  [org.slf4j/log4j-over-slf4j "1.7.25"]
 
                  ;;; Time library
-                 [clj-time "0.13.0"]
+                 [clj-time "0.14.0"]
 
                  ;;; Parse/generate CSV
                  [clojure-csv/clojure-csv "2.0.2"]]

@@ -78,7 +78,7 @@ This is a single-page application, with multiple tabs:
 
 ### Building client and running
 
-- Open one of the .cljs files in Emacs, and give the usual C-M-Sh-J salute
+- Open one of the .cljs files in Emacs, and give the usual c-c m-sh-J salute
 - Browse to localhost:3449
 
 ## Production server
@@ -102,7 +102,7 @@ Browse to port 80 on the server.
 
 ## Currently
 
-I am still using an in-mmeory Datomic DB. It is pre-populated with the schema and just one user.
+I am still using an in-memory Datomic DB. It is pre-populated with the schema and just one user.
 
 The initial user is `admin@degel.com`. The initial password is obviously secret, and is
 hashed in `server/resources/receipts-server_service.edn`. Contact me if you need the

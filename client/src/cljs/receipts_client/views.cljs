@@ -30,6 +30,7 @@
 (def field-width "14rem")
 
 
+;; [TODO] Move to utils lib
 ;; Nice sugar from https://lambdaisland.com/blog/11-02-2017-re-frame-form-1-subscriptions
 (def <sub (comp deref re-frame/subscribe))
 (def >evt re-frame/dispatch)

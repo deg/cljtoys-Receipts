@@ -3,6 +3,7 @@
    [clojure.spec.alpha :as s]
    [clojure.spec.gen.alpha :as gen]))
 
+;; [TODO] Move to utils
 (defn validate
   "Like s/valid?, but show the error like s/assert"
   [spec x]

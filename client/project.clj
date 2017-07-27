@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
-                 [org.clojure/clojurescript "1.9.562"]
-                 [reagent "0.6.2"]
+                 [org.clojure/clojurescript "1.9.671"]
+                 [reagent "0.7.0"]
                  [re-frame "0.9.4"]
                  [re-frisk "0.4.5"]
                  [org.clojure/core.async "0.3.443"]
@@ -14,8 +14,8 @@
                  [garden "1.3.2"]
                  [ns-tracker "0.3.1"]
                  [cljs-ajax "0.6.0"]
-                 [day8.re-frame/http-fx "0.1.3"]
-                 [com.andrewmcveigh/cljs-time "0.5.0"]
+                 [day8.re-frame/http-fx "0.1.4"]
+                 [com.andrewmcveigh/cljs-time "0.5.1"]
                  [funcool/struct "1.0.0"]
 
                  ;; Cookie support
@@ -45,8 +45,8 @@
   :profiles
   {:dev
    {:dependencies [[binaryage/devtools "0.9.4"]
-                   [figwheel-sidecar "0.5.10"]
-                   [com.cemerick/piggieback "0.2.1"]]
+                   [figwheel-sidecar "0.5.11"]
+                   [com.cemerick/piggieback "0.2.2"]]
 
     :plugins      [[lein-figwheel "0.5.10"]
                    [lein-doo "0.1.7"]]}}
