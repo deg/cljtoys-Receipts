@@ -248,6 +248,7 @@
         :width field-width
         :model (or (:purchase/comment receipt) "")
         :on-change #(>evt [:edit-current-receipt :purchase/comment %])
+        :change-on-blur? false ;; For touch screen; otherwise misses change immediately before submit
         :attr {:type "text"}]]
       [labelled "Consumer"
        (:purchase/consumer validation-errors)
