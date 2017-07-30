@@ -9,7 +9,6 @@
                  [re-frame "0.9.4"]
                  [re-frisk "0.4.5"]
                  [org.clojure/core.async "0.3.443"]
-                 [re-com "2.1.0"]
                  [secretary "1.2.3"]
                  [garden "1.3.2"]
                  [ns-tracker "0.3.1"]
@@ -19,7 +18,9 @@
                  [funcool/struct "1.0.0"]
 
                  ;; Cookie support
-                 [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]]
+                 [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]
+
+                 [soda-ash "0.3.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]
