@@ -106,7 +106,7 @@
 
 (defn input-text [& {:keys [receipt field-key]}]
   [na/input {:type "text"
-             :value (or (field-key receipt) "")
+             :default-value (or (field-key receipt) "")
              :on-change (na/>event [:edit-current-receipt field-key])}])
 
 (defn input-currency [& {:keys [receipt field-key]}]
@@ -260,7 +260,7 @@
                  :label label
                  :placeholder (-> field name (str "..."))
                  :type (or type "text")
-                 :value (or (field @into-atom) "")
+                 :default-value (or (field @into-atom) "")
                  :on-change #(swap! into-atom assoc field (.-value %2))}])
 
 (defn add-user []
@@ -354,11 +354,12 @@
         [na/dropdown {:default-value (or @category "")
                       :options (na/dropdown-list categories :db/id :category/name)
                       :on-change #(reset! category (.-value %2))}]]
+       ;; [TODO] Merge this code with add-field, above
        [na/form-input {:inline? true
                        :label "Vendor"
                        :placeholder "Vendor..."
                        :type "text"
-                       :value @new-vendor
+                       :default-value @new-vendor
                        :on-change (na/>atom new-vendor)}]
        [na/form-button {:on-click #(do (>evt [:add-vendor @category @new-vendor])
                                        (reset! new-vendor ""))
@@ -522,7 +523,7 @@
          (when admin?
            [na/text-area {:placeholder "Entities..."
                           :rows 5
-                          :value @entities
+                          :default-value @entities
                           :on-change (na/>atom entities)}])
          (when admin?
            [na/form-button {:on-click (na/>event [:load-entities (reader/read-string (str "[" @entities "]"))])
