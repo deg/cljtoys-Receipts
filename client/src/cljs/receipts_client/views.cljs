@@ -141,9 +141,9 @@
 (defn currency-symbol [abbrev]
   (case abbrev
     "USD" "$"
-    "EU"  "\u20AC"
-    "GBP" "\u00A3"
-    "NIS" "\u20AA"
+    "EU"  chars/euro
+    "GBP" chars/gb-pound
+    "NIS" chars/new-israeli-shekel
     "?"))
 
 
@@ -385,10 +385,10 @@
          [na/form-input {:inline? true :label "Action"}
           [na/dropdown {:default-value @action
                         :options actions
-                        :on-change (na/>atom action keyword)}]
+                        :on-change (na/>atom action :add keyword)}]
           [na/dropdown {:default-value @entity
                         :options entity-names
-                        :on-change (na/>atom entity keyword)}]]
+                        :on-change (na/>atom entity :vendor keyword)}]]
          [panel-subtitle (str (utils/get-at actions :value @action :text) " "
                               (utils/get-at entity-names :value @entity :text))]
          (case @action
