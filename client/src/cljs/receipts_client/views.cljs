@@ -14,98 +14,67 @@
    [receipts-client.routes :as routes]
    [receipts-client.utils :as utils]
    [receipts.specs :as specs]
-   [soda-ash.core :as sa]
+   [sodium.chars :as chars]
+   [sodium.re-utils :refer [<sub >evt]]
+   [sodium.core :as na]
    [struct.core :as struct]))
 
 
-;; home
-
-(def tight-gap "0.2rem")
-(def std-gap "0.5rem")
-
-
-;; [TODO] Move to utils lib
-;; Nice sugar from https://lambdaisland.com/blog/11-02-2017-re-frame-form-1-subscriptions
-(def <sub (comp deref re-frame/subscribe))
-(def >evt re-frame/dispatch)
-
-(def em-dash "\u2014")
-
 (defn app-title []
-  [sa/Header {:content (str (<sub [:name])
+  [na/header {:content (str (<sub [:name])
                             (when (= (<sub [:server]) :development)
-                              (str " " em-dash " local (dev) server")))
-              :dividing true
+                              (str " " chars/em-dash " local (dev) server")))
+              :dividing? true
               :size :large}])
 
 (defn panel-title [label]
   {:pre [(specs/validate string? label)]}
-  [sa/Header {:content label
-              :dividing false
+  [na/header {:content label
+              :dividing? false
               :size :medium}])
 
 (defn panel-subtitle [label]
   {:pre [(specs/validate string? label)]}
-  [sa/Header {:content label
-              :dividing false
+  [na/header {:content label
+              :dividing? false
               :size :small}])
 
 (defn section-title [label]
   {:pre [(specs/validate string? label)]}
-  [sa/Header {:content label
-              :dividing false
-              :sub true
+  [na/header {:content label
+              :dividing? false
+              :sub? true
               :size :medium}])
 
 (defn subsection-title [label]
   {:pre [(specs/validate string? label)]}
-  [sa/Header {:content label
-              :dividing false
-              :sub true
+  [na/header {:content label
+              :dividing? false
+              :sub? true
               :size :small}])
-
-(defn button [dispatch label tooltip & {:keys [positive negative size disabled?]
-                                        :or {positive false
-                                             negative false
-                                             size "medium"
-                                             disabled? false}}]
-  {:pre [(specs/validate (s/or :dispatch ::specs/event-vector :fn ifn?) dispatch)
-         (specs/validate string? label)
-         (specs/validate string? tooltip)]}
-  [sa/FormButton {:type "button"
-                  :content label
-                  :data-tooltip tooltip
-                  :disabled disabled?
-                  :positive positive
-                  :negative negative
-                  :size size
-                  :onClick #(if (vector? dispatch)
-                              (>evt dispatch)
-                              (dispatch))}])
-
-(defn reset-value! [event atom]
-  (->> event .-target .-value (reset! atom)))
-
 
 (defn login-panel []
   (let [email (reagent/atom "")
         password (reagent/atom "")]
     (fn []
-      [sa/Form
+      [na/form {}
        (panel-title "Login")
-       [sa/FormInput {:inline true
-                      :required true
-                      :label "Email"
-                      :placeholder "foo@gmail.com"
-                      :type "email"
-                      :onChange #(reset-value! % email)}]
-       [sa/FormInput {:inline true
-                      :required true
-                      :label "Password"
-                      :placeholder "shhhh..."
-                      :type "password"
-                      :onChange #(reset-value! % password)}]
-       [button [:login @email @password] "Login" "Login to server" :positive true]])))
+       [na/form-input {:inline? true
+                       :required? true
+                       :label "Email"
+                       :placeholder "foo@gmail.com"
+                       :type "email"
+                       :on-change (na/>atom email)}]
+       [na/form-input {:inline? true
+                       :required? true
+                       :label "Password"
+                       :placeholder "shhhh..."
+                       :type "password"
+                       :on-change (na/>atom password)}]
+       [na/form-button {:on-click (na/>event [:login @email @password])
+                        :content "Login"
+                        :data-tooltip "Login to server"
+                        :positive? true}]])))
 
 (defn unavailable []
   [:div [:em "(Unavailable)"]])
@@ -128,58 +97,46 @@
 (defn valid-receipt? [receipt]
   (struct/valid? receipt complete-receipt))
 
-(defn dropdown-list [items value-fn text-fn]
-  (map (fn [item]
-         {:key (value-fn item)
-          :value (value-fn item)
-          :text (text-fn item)})
-       items))
-
 (defn labelled-field [& {:keys [errors field-key label content]}]
   (let [error (and field-key (field-key errors))]
-    [sa/FormInput {:inline true :label label}
+    [na/form-input {:inline? true :label label}
      content
      (when error
-       [sa/Rail {:position "right" :close true :className "errmsg"} error])]))
+       [na/rail {:position "right" :attached? true :class-name "errmsg"} error])]))
 
 (defn input-text [& {:keys [receipt field-key]}]
-  [sa/Input {:type "text"
+  [na/input {:type "text"
              :value (or (field-key receipt) "")
-             :onChange #(>evt [:edit-current-receipt field-key (.-value %2)])}])
+             :on-change (na/>event [:edit-current-receipt field-key])}])
 
 (defn input-currency [& {:keys [receipt field-key]}]
-  [sa/Input {:type "number"
+  [na/input {:type "number"
              :step "0.01"
              :value (or (field-key receipt) "")
-             :onChange #(>evt [:edit-current-receipt field-key (.-value %2)])}])
+             :on-change (na/>event [:edit-current-receipt field-key])}])
 
 (def ndate-format (time-format/formatter "yyyy-MM-dd"))
 
 (defn date [& {:keys [receipt subs-key field-key]}]
-  [sa/Input {:type "date"
+  [na/input {:type "date"
              :value (time-format/unparse ndate-format
                                          (time-coerce/to-date-time (field-key receipt)))
-             :onChange #(>evt [:edit-current-receipt field-key
-                               (time-coerce/to-date
-                                (if (empty? (.-value %2))
-                                  (time/now)
-                                  (.-value %2)))])}])
+             :on-change (na/>event [:edit-current-receipt field-key] (time/now) time-coerce/to-date)}])
 
 (defn selection [& {:keys [receipt subs-key field-key schema-id-key schema-label-key filter-fn multiple?]}]
-  (let [options (dropdown-list (if filter-fn
-                                 (filter filter-fn (<sub [subs-key]))
-                                 (<sub [subs-key]))
-                               schema-id-key (or schema-label-key schema-id-key))]
-    (if multiple?
-      [sa/Dropdown {:multiple true
-                    :value (or (field-key receipt) #{})
-                    :options options
-                    :onChange #(>evt [:edit-current-receipt field-key
-                                      (->> %2 .-value (into #{}))])}]
-      [sa/Select {:value (or (field-key receipt) "")
+  (let [options (na/dropdown-list (if filter-fn
+                                    (filter filter-fn (<sub [subs-key]))
+                                    (<sub [subs-key]))
+                                  schema-id-key (or schema-label-key schema-id-key))]
+    [na/dropdown {:multiple? multiple?
+                  :value (or (field-key receipt) (if multiple? #{} ""))
                   :options options
-                  :onChange #(>evt [:edit-current-receipt field-key
-                                    (.-value %2)])}])))
+                  :button? true
+                  :on-change (na/>event [:edit-current-receipt field-key]
+                                        nil
+                                        (if multiple?
+                                          (partial into #{})
+                                          identity))}]))
 
 (defn currency-symbol [abbrev]
   (case abbrev
@@ -193,9 +150,9 @@
 (defn receipt-page []
   (let [receipt (<sub [:current-receipt])
         validation-errors (first (validate-receipt receipt))]
-    [sa/Form
+    [na/form {}
      (labelled-field
-      :label "Source"
+      :label "Source:"
       :field-key :purchase/source
       :errors  validation-errors
       :content (selection
@@ -206,14 +163,14 @@
                 :schema-label-key :source/name))
 
      (labelled-field
-      :label "Date"
+      :label "Date:"
       :field-key :purchase/date
       :errors validation-errors
       :content (date
                 :receipt receipt
                 :field-key :purchase/date))
      (labelled-field
-      :label "Price"
+      :label "Price:"
       :field-key :purchase/price
       :errors validation-errors
       :content (input-currency
@@ -221,7 +178,7 @@
                 :subs-key :prices
                 :field-key :purchase/price))
      (labelled-field
-      :label "Currency"
+      :label "Currency:"
       :field-key :purchase/currency
       :errors validation-errors
       :content (selection
@@ -232,7 +189,7 @@
                 :schema-label-key #(str (-> % :currency/abbrev currency-symbol) ": "  (:currency/name %))))
 
      (labelled-field
-      :label "Category"
+      :label "Category:"
       :field-key :purchase/category
       :errors validation-errors
       :content (selection
@@ -241,7 +198,7 @@
                 :field-key :purchase/category
                 :schema-id-key :category/name))
      (labelled-field
-      :label "Vendors"
+      :label "Vendors:"
       :field-key :purchase/vendor
       :errors validation-errors
       :content (selection
@@ -251,14 +208,14 @@
                 :schema-id-key :vendor/name
                 :filter-fn #(some #{(:purchase/category receipt)} (:vendor/category %))))
      (labelled-field
-      :label "Comment"
+      :label "Comment:"
       :field-key :purchase/comment
       :errors validation-errors
       :content (input-text
                 :receipt receipt
                 :field-key :purchase/comment))
      (labelled-field
-      :label "Consumer"
+      :label "Consumer:"
       :field-key :purchase/consumer
       :errors validation-errors
       :content (selection
@@ -269,19 +226,23 @@
                 :schema-label-key :user/name
                 :schema-id-key :user/abbrev
                 :multiple? true))
-     [button [:submit-receipt (-> receipt
-                                  (update :purchase/date time-coerce/to-date)
-                                  (update :purchase/price js/parseFloat))]
-      "Submit Receipt"
-      "Press to record receipt"
-      :positive true
-      :disabled? (not (valid-receipt? receipt))]]))
+     [na/form-button {:on-click (na/>event
+                                 [:submit-receipt (-> receipt
+                                                      (update :purchase/date time-coerce/to-date)
+                                                      (update :purchase/price js/parseFloat))])
+                      :content "Submit Receipt"
+                      :data-tooltip "Press to record receipt"
+                      :positive? true
+                      :disabled? (not (valid-receipt? receipt))}]]))
 
 (defn interstitial-page []
   [:div
    [:img {:src (str "http://thecatapi.com/api/images/get?format=src&size=small&"
                     "cacheBuster=" (str (rand)))}]
-   [button [:next-receipt] "Continue" "enter next receipt" :positive true]])
+   [na/form-button {:on-click (na/>event [:next-receipt])
+                    :content "Continue"
+                    :data-tooltip "enter next receipt"
+                    :positive? true}]])
 
 (defn home-panel []
   (if (:user/isEditor (<sub [:user]))
@@ -293,13 +254,14 @@
 (defn has? [entity-atom field]
   (-> @entity-atom field str/blank? not))
 
+;; [TODO] Needs cleanup
 (defn add-field [into-atom & {:keys [label field type] :or {type "text"}}]
-  [sa/FormInput {:inline true
+  [na/form-input {:inline? true
                  :label label
                  :placeholder (-> field name (str "..."))
                  :type (or type "text")
                  :value (or (field @into-atom) "")
-                 :onChange #(swap! into-atom assoc field (.-value %2))}])
+                 :on-change #(swap! into-atom assoc field (.-value %2))}])
 
 (defn add-user []
   (let [new-user (reagent/atom {})]
@@ -308,7 +270,7 @@
             editor? (or (-> @new-user :permissions :user/isAdmin)
                         (-> @new-user :permissions :user/isEditor))
             consumer? (-> @new-user :permissions :user/isConsumer)]
-        [sa/FormGroup
+        [na/form-group {}
          (add-field new-user :label "Name" :field :name)
          (when editor?
            (add-field new-user :label "Password" :field :password :type "password"))
@@ -317,123 +279,124 @@
          (when editor?
            (add-field new-user :label "Email" :field :email :type "Email"))
          [labelled-field
-          :label "Permissions"
-          :content [sa/Dropdown {:multiple true
-                                 :value (do (prn "GOT: " (:permissions @new-user))
-                                            (or (:permissions @new-user) #{}))
-                                 :onChange #(->> (.-value %2)
+          :label "Permissions:"
+          :content [na/dropdown {:multiple? true
+                                 :value (na/<atom new-user #{} :permissions)
+                                 :on-change ;; [TODO] Can this be generalized?
+                                            #(->> (.-value %2)
                                                  (map (fn [x] (keyword "user" x)))
                                                  (into #{})
                                                  (swap! new-user assoc :permissions))
                                  :options (if i-am-admin?
-                                            [{:key :user/isAdmin    :value :user/isAdmin    :text "Administrator"}
-                                             {:key :user/isEditor   :value :user/isEditor   :text "Editor"}
-                                             {:key :user/isConsumer :value :user/isConsumer :text "Consumer"}]
-                                            [{:key :user/isConsumer :value :user/isConsumer :text "Consumer"}])}]]
-         [button #(do (>evt [:add-user @new-user])
-                      (reset! new-user {}))
-          "Add User" "Create a new user"
-          :positive true
-          :disabled? (not (and (has? new-user :name)
-                               (or (and consumer? (has? new-user :abbrev))
-                                   (and editor? (has? new-user :password) (has? new-user :email)))))]]))))
+                                            [(na/list-option :user/isAdmin "Administrator")
+                                             (na/list-option :user/isEditor "Editor")
+                                             (na/list-option :user/isConsumer "Consumer")]
+                                            [(na/list-option :user/isConsumer "Consumer")])}]]
+         [na/form-button {:on-click #(do (>evt [:add-user @new-user])
+                                         (reset! new-user {}))
+                          :content "Add User"
+                          :data-tooltip "Create a new user"
+                          :positive? true
+                          :disabled? (not (and (has? new-user :name)
+                                               (or (and consumer? (has? new-user :abbrev))
+                                                   (and editor? (has? new-user :password) (has? new-user :email)))))}]]))))
 
 (defn add-source []
   (let [new-source (reagent/atom {})]
     (fn []
-      [sa/FormGroup
+      [na/form-group {}
        (add-field new-source :label "Name" :field :name)
        (add-field new-source :label "Abbrev" :field :abbrev)
-       (button #(do (>evt [:add-source @new-source])
-                    (reset! new-source {}))
-               "Add Source" "Create a new source"
-               :positive true
-               :disabled? (not (and (has? new-source :name)
-                                    (has? new-source :abbrev))))])))
+       [na/form-button {
+                        :on-click #(do (>evt [:add-source @new-source])
+                                       (reset! new-source {}))
+                        :content "Add Source"
+                        :data-tooltip "Create a new source"
+                        :positive? true
+                        :disabled? (not (and (has? new-source :name)
+                                             (has? new-source :abbrev)))}]])))
 
 (defn add-category  []
   (let [new-category (reagent/atom {})]
     (fn []
-      [sa/FormGroup
+      [na/form-group {}
        (add-field new-category :label "Name" :field :name)
        (add-field new-category :label "Description" :field :description)
-       (button #(do (>evt [:add-category @new-category])
-                    (reset! new-category {}))
-               "Add Category" "Create a new category"
-               :positive true
-               :disabled? (not (and (has? new-category :name)
-                                    (has? new-category :description))))])))
+       [na/form-button {:on-click #(do (>evt [:add-category @new-category])
+                                       (reset! new-category {}))
+                        :content "Add Category"
+                        :data-tooltip "Create a new category"
+                        :positive? true
+                        :disabled? (not (and (has? new-category :name)
+                                             (has? new-category :description)))}]])))
 
 (defn add-currency  []
   (let [new-currency (reagent/atom {})]
     (fn []
-      [sa/FormGroup
+      [na/form-group {}
        (add-field new-currency :label "Name" :field :name)
        (add-field new-currency :label "Abbrev" :field :abbrev)
-       [button #(do (>evt [:add-currency @new-currency])
-                    (reset! new-currency {}))
-        "Add Currency" "Create a new currency"
-        :positive true
-        :disabled? (not (and (has? new-currency :name)
-                             (has? new-currency :abbrev)))]])))
+       [na/form-button {:on-click #(do (>evt [:add-currency @new-currency])
+                                       (reset! new-currency {}))
+                        :content "Add Currency"
+                        :data-tooltip "Create a new currency"
+                        :positive? true
+                        :disabled? (not (and (has? new-currency :name)
+                                             (has? new-currency :abbrev)))}]])))
 
 (defn add-vendor []
   (let [categories (<sub [:categories])
         category (reagent/atom (-> categories first :db/id))
         new-vendor (reagent/atom "")]
     (fn []
-      [sa/FormGroup
-       [sa/FormInput {:inline true :label "Category"}
-        [sa/Select {:default-value (or @category "")
-                    :options (mapv (fn [cat]
-                                     {:key (:db/id cat)
-                                      :value (:db/id cat)
-                                      :text (:category/name cat)})
-                                   categories)
-                    :onChange #(reset! category (.-value %2))}]]
-       [sa/FormInput {:inline true
-                      :label "Vendor"
-                      :placeholder "Vendor..."
-                      :type "text"
-                      :value @new-vendor
-                      :onChange #(reset-value! % new-vendor)}]
-       [button #(do (>evt [:add-vendor @category @new-vendor])
-                    (reset! new-vendor ""))
-        "Add Vendor" "Create a new vendor"
-        :positive true
-        :disabled? (empty? @new-vendor)]])))
+      [na/form-group {}
+       [na/form-input {:inline? true :label "Category"}
+        [na/dropdown {:default-value (or @category "")
+                      :options (na/dropdown-list categories :db/id :category/name)
+                      :on-change #(reset! category (.-value %2))}]]
+       [na/form-input {:inline? true
+                       :label "Vendor"
+                       :placeholder "Vendor..."
+                       :type "text"
+                       :value @new-vendor
+                       :on-change (na/>atom new-vendor)}]
+       [na/form-button {:on-click #(do (>evt [:add-vendor @category @new-vendor])
+                                       (reset! new-vendor ""))
+                        :content "Add Vendor"
+                        :data-tooltip "Create a new vendor"
+                        :positive? true
+                        :disabled? (empty? @new-vendor)}]])))
 
 (defn edit-panel []
-  (let [actions [{:key :add :value :add :text "Add"}
-                 {:key :edit :value :edit :text "Edit"}]
-        entity-names [{:key :user :value :user :text "User"}
-                      {:key :source :value :source :text "Source"}
-                      {:key :category :value :category :text "Category"}
-                      {:key :currency :value :currency :text "Currency"}
-                      {:key :vendor :value :vendor :text "vendor"}]
+  (let [actions [(na/list-option :add "Add")
+                 (na/list-option :edit "Edit")]
+        entity-names [(na/list-option :user "User")
+                      (na/list-option :source "Source")
+                      (na/list-option :category "Category")
+                      (na/list-option :currency "Currency")
+                      (na/list-option :vendor "vendor")]
         action (reagent/atom :add)
         entity (reagent/atom :vendor)]
     (fn []
       (if (<sub [:user])
-        [sa/Form
+        [na/form {}
          [panel-title "Schema Editor"]
-         [sa/FormInput {:inline true
-                        :label "Action"}
-          [sa/Select {:default-value @action
-                      :options actions
-                      :onChange #(->> %2 .-value keyword (reset! action))}]
-          [sa/Select {:default-value @entity
-                      :options entity-names
-                      :onChange #(->> %2 .-value keyword (reset! entity))}]]
+         [na/form-input {:inline? true :label "Action"}
+          [na/dropdown {:default-value @action
+                        :options actions
+                        :on-change (na/>atom action keyword)}]
+          [na/dropdown {:default-value @entity
+                        :options entity-names
+                        :on-change (na/>atom entity keyword)}]]
          [panel-subtitle (str (utils/get-at actions :value @action :text) " "
                               (utils/get-at entity-names :value @entity :text))]
          (case @action
            :add (case @entity
-                  :user [add-user]
-                  :source [add-source]
+                  :user     [add-user]
+                  :source   [add-source]
                   :category [add-category]
                   :currency [add-currency]
-                  :vendor [add-vendor]
+                  :vendor   [add-vendor]
                   [:div "ERROR??"])
            :edit [:div "NYI"])]
         [login-panel]))))
@@ -494,11 +457,11 @@
                 purchases)]])
 
 (defn history-csv [csv]
-  [sa/TextArea {:rows  12
-                :disabled true
-                :style {:width "100%"
-                        :font-family "Monospace"}
-                :value (or csv "")}])
+  [na/text-area {:rows  12
+                 :disabled? true
+                 :style {:width "100%"
+                         :font-family "Monospace"}
+                 :value (or csv "")}])
 
 (defn history-panel []
   (if (<sub [:user])
@@ -508,8 +471,10 @@
       [:div
        (panel-title "History")
        [history-table (<sub [:history])]
-       (button [:get-history] "Refresh History" "Load history from server"
-               :positive true)
+       [na/form-button {:on-click (na/>event [:get-history])
+                        :content "Refresh History"
+                        :data-tooltip "Load history from server"
+                        :positive? true}]
        (when admin?
          [history-csv (<sub [:history-csv])])])
     [login-panel]))
@@ -534,36 +499,40 @@
             editor? (:user/isEditor (<sub [:user]))
             admin? (:user/isAdmin (<sub [:user]))
             schema (<sub [:schema])]
-        [sa/Form {:widths "equal"}
+        [na/form {:widths "equal"}
          (panel-title "Setup")
-         [sa/Grid
+         [na/grid {}
           [:div (str "Logged in as " (or email "[UNKNOWN USER]"))]
-          [button [:logout] "Logout" "Logout from server" :negative true :size "tiny"]]
+          [na/form-button {:on-click (na/>event [:logout])
+                           :content "Logout"
+                           :data-tooltip "Logout from server"
+                           :negative? true
+                           :size "tiny"}]]
          (section-title "Developer tools")
 
          (when-not admin?
            [unavailable])
          (when admin?
-           [sa/FormGroup
-            [sa/FormInput {:inline true :label "Choose server"}
-             [sa/Select {:default-value (<sub [:server])
-                         :options [{:key "production" :value :production :text "production"}
-                                   {:key "development" :value :development :text "development"}]
-                         :onChange #(>evt [:set-server (-> %2 .-value keyword)])}]]])
+           [na/form-group {}
+            [na/form-input {:inline? true :label "Choose server"}
+             [na/dropdown {:default-value (<sub [:server])
+                           :options [(na/list-option :production "production")
+                                     (na/list-option :development "development")]
+                           :on-change (na/>event [:set-server] :development keyword)}]]])
          (when admin?
-           [sa/TextArea {:placeholder "Entities..."
-                         :rows 5
-                         :value @entities
-                         :onChange #(->> % .-target .-value (reset! entities))}])
+           [na/text-area {:placeholder "Entities..."
+                          :rows 5
+                          :value @entities
+                          :on-change (na/>atom entities)}])
          (when admin?
-           (button [:load-entities (reader/read-string (str "[" @entities "]"))]
-                   "Load entities"
-                   "Add objects, e.g. saved from a previous database instantiation"
-                   :positive true))
+           [na/form-button {:on-click (na/>event [:load-entities (reader/read-string (str "[" @entities "]"))])
+                            :content "Load entities"
+                            :data-tooltip "Add objects, e.g. saved from a previous database instantiation"
+                            :positive? true}])
          (section-title "Schema")
-         [sa/Checkbox {:label "Show all?"
-                       :checked @verbose?
-                       :onChange #(reset! verbose? (.-checked %2))}]
+         [na/checkbox {:label "Show all?"
+                       :checked? @verbose?
+                       :on-change (na/>atom verbose?)}]
          (formatted-schema "Users" (:users schema) (not @verbose?))
          (formatted-schema "Sources" (:sources schema) (not @verbose?))
          (formatted-schema "Currencies" (:currencies schema) (not @verbose?))
@@ -578,7 +547,7 @@
 
 ;; [TODO] Delete if not needed
 (defn wrap-page [page]
-  [sa/Container page])
+  [na/container {} page])
 
 (def tabs [{:id :home    :label "receipt"   :panel (wrap-page [home-panel])}
            {:id :edit    :label "edit"      :panel (wrap-page [edit-panel])}
@@ -592,15 +561,14 @@
               :home-panel)))
 
 (defn tabs-row []
-  (into [sa/Menu {;:stackable true
-                  :tabular true}]
+  (into [na/menu {:tabular? true}]
         (map (fn [{:keys [id label]}]
                (let [active? (= id (or (<sub [:page]) :home))
                      handler #(routes/goto-page id (<sub [:server]))]
-                 [sa/MenuItem {:name label
-                               :active active?
-                               :color (if active? "blue" "grey")
-                               :onClick handler}]))
+                 [na/menu-item {:name label
+                                :active? active?
+                                :color (if active? "blue" "grey")
+                                :on-click handler}]))
              tabs)))
 
 (defn main-panel []

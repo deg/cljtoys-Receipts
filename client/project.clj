@@ -20,14 +20,14 @@
                  ;; Cookie support
                  [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]
 
-                 [soda-ash "0.3.0"]]
+                 [com.degel/sodium "0.1.0-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]
 
   :min-lein-version "2.5.3"
 
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "checkouts/sodium/src"]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
                                     "test/js"
@@ -55,7 +55,7 @@
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/cljs" "src/cljc"]
+     :source-paths ["src/cljs" "src/cljc" "checkouts/sodium/src"]
      :figwheel     {:on-jsload "receipts-client.core/mount-root"}
      :compiler     {:main                 receipts-client.core
                     :output-to            "resources/public/js/compiled/app.js"

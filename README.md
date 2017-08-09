@@ -165,5 +165,5 @@ I'll get back to you.
 
 Licensed under the Eclipse Public License.
 
-Copyright (c) 2017, David Goldfarb <deg@degel.com>
+Copyright © 2017, David Goldfarb <deg@degel.com>
 Portions based on earlier versions of this application, also written by me, copyright 2013-2016
