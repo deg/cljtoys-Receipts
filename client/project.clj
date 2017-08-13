@@ -20,7 +20,7 @@
                  ;; Cookie support
                  [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]
 
-                 [com.degel/sodium "0.1.0-SNAPSHOT"]]
+                 [com.degel/sodium "0.1.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]
@@ -49,7 +49,7 @@
                    [figwheel-sidecar "0.5.11"]
                    [com.cemerick/piggieback "0.2.2"]]
 
-    :plugins      [[lein-figwheel "0.5.10"]
+    :plugins      [[lein-figwheel "0.5.11"]
                    [lein-doo "0.1.7"]]}}
 
   :cljsbuild
