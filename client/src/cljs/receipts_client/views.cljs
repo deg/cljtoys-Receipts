@@ -17,48 +17,16 @@
    [sodium.chars :as chars]
    [sodium.re-utils :refer [<sub >evt]]
    [sodium.core :as na]
+   [sodium.extensions :as nax]
    [struct.core :as struct]))
 
-
-(defn app-title []
-  [na/header {:content (str (<sub [:name])
-                            (when (= (<sub [:server]) :development)
-                              (str " " chars/em-dash " local (dev) server")))
-              :dividing? true
-              :size :large}])
-
-(defn panel-title [label]
-  {:pre [(specs/validate string? label)]}
-  [na/header {:content label
-              :dividing? false
-              :size :medium}])
-
-(defn panel-subtitle [label]
-  {:pre [(specs/validate string? label)]}
-  [na/header {:content label
-              :dividing? false
-              :size :small}])
-
-(defn section-title [label]
-  {:pre [(specs/validate string? label)]}
-  [na/header {:content label
-              :dividing? false
-              :sub? true
-              :size :medium}])
-
-(defn subsection-title [label]
-  {:pre [(specs/validate string? label)]}
-  [na/header {:content label
-              :dividing? false
-              :sub? true
-              :size :small}])
 
 (defn login-panel []
   (let [email (reagent/atom "")
         password (reagent/atom "")]
     (fn []
       [na/form {}
-       (panel-title "Login")
+       (nax/panel-header "Login")
        [na/form-input {:inline? true
                        :required? true
                        :label "Email"
@@ -96,13 +64,6 @@
 
 (defn valid-receipt? [receipt]
   (struct/valid? receipt complete-receipt))
-
-(defn labelled-field [& {:keys [errors field-key label content]}]
-  (let [error (and field-key (field-key errors))]
-    [na/form-input {:inline? true :label label}
-     content
-     (when error
-       [na/rail {:position "right" :attached? true :class-name "errmsg"} error])]))
 
 (defn input-text [& {:keys [receipt field-key]}]
   [na/input {:type "text"
@@ -151,8 +112,9 @@
   (let [receipt (<sub [:current-receipt])
         validation-errors (first (validate-receipt receipt))]
     [na/form {}
-     (labelled-field
+     (nax/labelled-field
       :label "Source:"
+      :inline? true
       :field-key :purchase/source
       :errors  validation-errors
       :content (selection
@@ -162,23 +124,26 @@
                 :schema-id-key :source/abbrev
                 :schema-label-key :source/name))
 
-     (labelled-field
+     (nax/labelled-field
       :label "Date:"
+      :inline? true
       :field-key :purchase/date
       :errors validation-errors
       :content (date
                 :receipt receipt
                 :field-key :purchase/date))
-     (labelled-field
+     (nax/labelled-field
       :label "Price:"
+      :inline? true
       :field-key :purchase/price
       :errors validation-errors
       :content (input-currency
                 :receipt receipt
                 :subs-key :prices
                 :field-key :purchase/price))
-     (labelled-field
+     (nax/labelled-field
       :label "Currency:"
+      :inline? true
       :field-key :purchase/currency
       :errors validation-errors
       :content (selection
@@ -188,8 +153,9 @@
                 :schema-id-key :currency/abbrev
                 :schema-label-key #(str (-> % :currency/abbrev currency-symbol) ": "  (:currency/name %))))
 
-     (labelled-field
+     (nax/labelled-field
       :label "Category:"
+      :inline? true
       :field-key :purchase/category
       :errors validation-errors
       :content (selection
@@ -197,8 +163,9 @@
                 :subs-key :categories
                 :field-key :purchase/category
                 :schema-id-key :category/name))
-     (labelled-field
+     (nax/labelled-field
       :label "Vendors:"
+      :inline? true
       :field-key :purchase/vendor
       :errors validation-errors
       :content (selection
@@ -207,15 +174,17 @@
                 :field-key :purchase/vendor
                 :schema-id-key :vendor/name
                 :filter-fn #(some #{(:purchase/category receipt)} (:vendor/category %))))
-     (labelled-field
+     (nax/labelled-field
       :label "Comment:"
+      :inline? true
       :field-key :purchase/comment
       :errors validation-errors
       :content (input-text
                 :receipt receipt
                 :field-key :purchase/comment))
-     (labelled-field
+     (nax/labelled-field
       :label "Consumer:"
+      :inline? true
       :field-key :purchase/consumer
       :errors validation-errors
       :content (selection
@@ -247,8 +216,8 @@
 (defn home-panel []
   (if (:user/isEditor (<sub [:user]))
     (if (<sub [:receipt-stored?])
-      [:div (panel-title "Receipt entered") [interstitial-page]]
-      [:div (panel-title "New Receipt")     [receipt-page]])
+      [:div (nax/panel-header "Receipt entered") [interstitial-page]]
+      [:div (nax/panel-header "New Receipt")     [receipt-page]])
     [login-panel]))
 
 (defn has? [entity-atom field]
@@ -278,8 +247,9 @@
            (add-field new-user :label "Abbrev" :field :abbrev))
          (when editor?
            (add-field new-user :label "Email" :field :email :type "Email"))
-         [labelled-field
+         [nax/labelled-field
           :label "Permissions:"
+          :inline? true
           :content [na/dropdown {:multiple? true
                                  :value (na/<atom new-user #{} :permissions)
                                  :on-change ;; [TODO] Can this be generalized?
@@ -381,7 +351,7 @@
     (fn []
       (if (<sub [:user])
         [na/form {}
-         [panel-title "Schema Editor"]
+         [nax/panel-header "Schema Editor"]
          [na/form-input {:inline? true :label "Action"}
           [na/dropdown {:default-value @action
                         :options actions
@@ -389,8 +359,8 @@
           [na/dropdown {:default-value @entity
                         :options entity-names
                         :on-change (na/>atom entity :vendor keyword)}]]
-         [panel-subtitle (str (utils/get-at actions :value @action :text) " "
-                              (utils/get-at entity-names :value @entity :text))]
+         [nax/panel-subheader (str (utils/get-at actions :value @action :text) " "
+                                   (utils/get-at entity-names :value @entity :text))]
          (case @action
            :add (case @entity
                   :user     [add-user]
@@ -404,7 +374,7 @@
 
 (defn about-panel []
   [:div
-   (panel-title "About")
+   (nax/panel-header "About")
    [:p "Third iteration of a simple receipts management program."]
    [:p "This time, my focus is on learning Vase, Datomic, and Pedestal."]
    [:h4 "Status"]
@@ -470,7 +440,7 @@
           editor? (:user/isEditor (<sub [:user]))
           admin? (:user/isAdmin (<sub [:user]))]
       [:div
-       (panel-title "History")
+       (nax/panel-header "History")
        [history-table (<sub [:history])]
        [na/form-button {:on-click (na/>event [:get-history])
                         :content "Refresh History"
@@ -482,7 +452,7 @@
 
 (defn formatted-schema [title schema-part only-dynamic?]
   [:div
-   [subsection-title title]
+   [nax/subsection-header title]
    [:ul (map (fn [tuple]
                ^{:key (:db/id tuple)}
                [:li {:style {:list-style "none"}}
@@ -501,7 +471,7 @@
             admin? (:user/isAdmin (<sub [:user]))
             schema (<sub [:schema])]
         [na/form {:widths "equal"}
-         (panel-title "Setup")
+         (nax/panel-header "Setup")
          [na/grid {}
           [:div (str "Logged in as " (or email "[UNKNOWN USER]"))]
           [na/form-button {:on-click (na/>event [:logout])
@@ -509,7 +479,7 @@
                            :data-tooltip "Logout from server"
                            :negative? true
                            :size "tiny"}]]
-         (section-title "Developer tools")
+         (nax/section-header "Developer tools")
 
          (when-not admin?
            [unavailable])
@@ -530,7 +500,7 @@
                             :content "Load entities"
                             :data-tooltip "Add objects, e.g. saved from a previous database instantiation"
                             :positive? true}])
-         (section-title "Schema")
+         (nax/section-header "Schema")
          [na/checkbox {:label "Show all?"
                        :checked? @verbose?
                        :on-change (na/>atom verbose?)}]
@@ -580,6 +550,6 @@
       ;; - No mechanism to get changed schema; especially, e.g., if a client is open for many days
       (>evt [:update-credentials])
       [:div
-       [app-title]
+       [nax/app-header [:name]]
        [tabs-row]
        [tab-panel]])))

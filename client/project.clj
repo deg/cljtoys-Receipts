@@ -20,7 +20,7 @@
                  ;; Cookie support
                  [com.degel/re-frame-storage-fx "0.1.0-SNAPSHOT"]
 
-                 [com.degel/sodium "0.1.0"]]
+                 [com.degel/sodium "0.2.0-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-garden "0.2.8"]]
